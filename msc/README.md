@@ -1,9 +1,8 @@
 # stdr_control
 An minimal, example node to illustrate control of the STDR mobile robot with open-loop commands.
 
-## Example usage
-`roslaunch stdr_launchers server_with_map_and_gui_plus_robot.launch`
-to start the simulator.  Run a simple, open-loop command sequence with:
-`rosrun stdr_control stdr_open_loop_commander`
+# Created by Trent Ziemer on Jan 31 2016 based on EECS 376 code examples.
 
+# This package has one node, started by running rosrun msc msc, which starts the my_stdr_control utility to send commands to the STDR mobile robot.
+# Assumed the simulator and robot are already up and running
     
