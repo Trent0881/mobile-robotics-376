@@ -6,7 +6,7 @@
 #include <std_msgs/Float32.h> //Including the Float32 class from std_msgs
 #include <std_msgs/Bool.h> // boolean message
 
-
+// CHanged by TZ
 const double MIN_SAFE_DISTANCE = 0.4; // set alarm
 
 // these values to be set within the laser callback
