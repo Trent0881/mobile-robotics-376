@@ -6,4 +6,7 @@ Spits out an alarm message if an object is close in front of the robot.
 Start up the STDR simulator:
 `roslaunch stdr_launchers server_with_map_and_gui_plus_robot.launch`
 Start the lidar alarm node:
- `rosrun rc lidar_alarm2`
+ `rosrun lidar_alarm lidar_alarm`
+ Have the controller code monitor the `lidar_alarm` topic and do something intelligent with the information.
+
+    

@@ -39,32 +39,41 @@ void laserCallback(const sensor_msgs::LaserScan& laser_scan) {
         ROS_INFO("LIDAR setup: ping_index = %d",ping_index_);
     }
 
+    // Constants for how many pings on either side to check (in addition to the middle one)
     int left_offset = -10;
     int right_offset = 10;
+    // Boolean holding variable to OR the results from each ping check
     bool unsafe_ping = false;
 
     ROS_INFO("STARTING PING RANGE TESTING");
+
+    // My main for loop, which checks all these pings, one by one
     for (int ping_index_offset = left_offset; ping_index_offset < right_offset; ping_index_offset++)
     {
+        // Increase index for this loop
         ping_index_ += ping_index_offset;
 
+        // Extract distance
         ping_dist_in_front_ = laser_scan.ranges[ping_index_];
         ROS_INFO("ping dist in front = %f",ping_dist_in_front_);
 
-
+        // Check distance
         if (ping_dist_in_front_<MIN_SAFE_DISTANCE)
         {
+            // Make the holding variable true, if any of the pings were too close
             if (unsafe_ping == false)
             {
                 unsafe_ping = true;
             }
             else
             {
+                // Extraneous, but w/e
                 ROS_INFO("A DUPLICATE UNSAFE PING WAS FOUND");
             }
         }
     }
 
+    // Same checking as before
     if (unsafe_ping == true) {
         ROS_WARN("DANGER, WILL ROBINSON!!");
         laser_alarm_=true;
