@@ -1,0 +1,10 @@
+<launch>
+	
+	<!-- Play pen create -->
+	<include file="$(find stdr_launchers)/launch/server_with_map_and_gui_plus_robot.launch" output="screen" />
+	
+	<!-- HW client (mpc = my path client) and service (mps2 = my path service 2) nodes for navigating the play pen -->
+	<node type="mpc" pkg="wps" name=my path client"" output="screen"/>
+	<node type="mps2" pkg="wps" name="my path service 2" output="screen"/>
+
+</launch>
