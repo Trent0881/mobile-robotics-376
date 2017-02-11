@@ -54,22 +54,18 @@ int main(int argc, char **argv) {
     path_srv.request.nav_path.poses.push_back(pose_stamped);
 
     //
-    quat = convertPlanarPhi2Quaternion(1.57); // get a quaternion corresponding to this heading
+    quat = convertPlanarPhi2Quaternion(1.57); 
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.y=1.0; // say desired y-coord is 1.0
+    pose_stamped.pose.position.y=1.0; 
     path_srv.request.nav_path.poses.push_back(pose_stamped);
 
     //
-    quat = convertPlanarPhi2Quaternion(1.57); // get a quaternion corresponding to this heading
+    quat = convertPlanarPhi2Quaternion(1.57);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.y=1.0; // say desired y-coord is 1.0
+    pose_stamped.pose.position.y=1.0;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
     
-    //
-    quat = convertPlanarPhi2Quaternion(-1.57);
-    pose_stamped.pose.orientation = quat;  
-    //desired position is not updated...just the desired heading  
-    path_srv.request.nav_path.poses.push_back(pose_stamped);
+    // Finally ask the server to initiate that path
     client.call(path_srv);
 
     return 0;
