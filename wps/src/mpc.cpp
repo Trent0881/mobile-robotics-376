@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
     //create some path points...this should be done by some intelligent algorithm, but we'll hard-code it here
     geometry_msgs::PoseStamped pose_stamped;
     geometry_msgs::Pose pose;
-    pose.position.x = 0; // say desired x-coord is inititally 2
+    pose.position.x = 0.0;
     pose.position.y = 0.0;
     pose.position.z = 0.0; // let's hope so!
     pose.orientation.x = 0.0; //always, for motion in horizontal plane
@@ -51,25 +51,25 @@ int main(int argc, char **argv) {
     // 
     quat = convertPlanarPhi2Quaternion(1.57);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.x = 1.8;
+    pose_stamped.pose.position.y = 1.8;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
 
     // 
     quat = convertPlanarPhi2Quaternion(0);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.y = 1;
+    pose_stamped.pose.position.x = 2.4;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
 
     // 
     quat = convertPlanarPhi2Quaternion(0);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.x = 1;
+    pose_stamped.pose.position.y = 2.5;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
 
     // 
     quat = convertPlanarPhi2Quaternion(0);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.y = 1;
+    pose_stamped.pose.position.x = -2;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
     
     // Finally ask the server to initiate that path

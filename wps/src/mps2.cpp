@@ -151,24 +151,26 @@ bool callback(example_ros_service::PathSrvRequest& request, example_ros_service:
 		new_x = pose_desired.position.x;
 		new_y = pose_desired.position.y;
 
-        travel_distance = pow( pow(new_x - current_x, 2) + pow(new_y - current_y, 2), 2);
-        
-        ROS_INFO("travel distance = %f",travel_distance); 
-
         // GET RID OF NEXT LINE AFTER FIXING get_yaw_and_dist()
         yaw_desired = convertPlanarQuat2Phi(pose_desired.orientation); //from i'th desired pose
         yaw_current = convertPlanarQuat2Phi(g_current_pose.orientation); //our current yaw--should use a sensor
         
 		ROS_INFO("pose %d: desired yaw = %f; desired (x,y) = (%f,%f)",i,yaw_desired, pose_desired.position.x,pose_desired.position.y); 
 
+
+        travel_distance = pow( pow(new_x - current_x, 2) + pow(new_y - current_y, 2), 0.5);
+        
+        ROS_INFO("travel distance = %f",travel_distance); 
+
         spin_angle = yaw_desired - yaw_current; // spin this much
         spin_angle = min_spin(spin_angle);// but what if this angle is > pi?  then go the other way
 
-        ROS_INFO("spin angle %d; then travel distance %d", spin_angle, travel_distance)
+        ROS_INFO("spin angle %f; then travel distance %f", spin_angle, travel_distance);
         do_spin(spin_angle); // carry out this incremental action
-        // we will just assume that this action was successful--really should have sensor feedback here
-        g_current_pose.orientation = pose_desired.orientation; // assumes got to desired orientation precisely
-        
+		// Assume no errors in actuation, and so say that current pose is just last position plus desired location
+		g_current_pose.orientation = pose_desired.orientation; // assumes got to desired orientation precisely
+        g_current_pose.position.x = new_x;
+        g_current_pose.position.y = new_y;
         //BASED ON get_yaw_and_dist()
         do_move(travel_distance);
         }
