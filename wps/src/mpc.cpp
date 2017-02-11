@@ -36,9 +36,9 @@ int main(int argc, char **argv) {
     //create some path points...this should be done by some intelligent algorithm, but we'll hard-code it here
     geometry_msgs::PoseStamped pose_stamped;
     geometry_msgs::Pose pose;
-    pose.position.x = 2; // say desired x-coord is inititally 2
+    pose.position.x = 0; // say desired x-coord is inititally 2
     pose.position.y = 0.0;
-    pose.position.z = 0.0; // let's hope so!
+    pose.position.z = 0.2; // let's hope so!
     pose.orientation.x = 0.0; //always, for motion in horizontal plane
     pose.orientation.y = 0.0; // ditto
     pose.orientation.z = 0.0; // implies oriented at yaw=0, i.e. along x axis
@@ -47,16 +47,11 @@ int main(int argc, char **argv) {
     path_srv.request.nav_path.poses.push_back(pose_stamped);
     
     // Additional poses to push to service
+
     // 
     quat = convertPlanarPhi2Quaternion(1.57);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.y=3;
-    path_srv.request.nav_path.poses.push_back(pose_stamped);
-
-    //
-    quat = convertPlanarPhi2Quaternion(1.57); 
-    pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.y=1.0; 
+    pose_stamped.pose.position.z = -0.3;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
     
     // Finally ask the server to initiate that path

@@ -125,7 +125,6 @@ void get_yaw_and_dist(geometry_msgs::Pose current_pose, geometry_msgs::Pose goal
 
 }
 
-
 bool callback(example_ros_service::PathSrvRequest& request, example_ros_service::PathSrvResponse& response)
 {
     ROS_INFO("callback activated");
@@ -140,10 +139,10 @@ bool callback(example_ros_service::PathSrvRequest& request, example_ros_service:
         
         //WRITE THIS FNC: compute desired heading and travel distance based on current and desired poses
         //get_yaw_and_dist(g_current_pose, pose_desired,travel_distance, yaw_desired);
-        //ROS_INFO("pose %d: desired yaw = %f; desired (x,y) = (%f,%f)",i,yaw_desired,
-        //   pose_desired.position.x,pose_desired.position.y); 
-        //ROS_INFO("current (x,y) = (%f, %f)",g_current_pose.position.x,g_current_pose.position.y);
-        //ROS_INFO("travel distance = %f",travel_distance);         
+        ROS_INFO("pose %d: desired yaw = %f; desired (x,y) = (%f,%f)",i,yaw_desired,
+           pose_desired.position.x,pose_desired.position.y); 
+        ROS_INFO("current (x,y) = (%f, %f)",g_current_pose.position.x,g_current_pose.position.y);
+        ROS_INFO("travel distance = %f",travel_distance);         
         
         
         // a quaternion is overkill for navigation in a plane; really only need a heading angle
