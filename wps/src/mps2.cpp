@@ -165,7 +165,7 @@ bool callback(example_ros_service::PathSrvRequest& request, example_ros_service:
         spin_angle = yaw_desired - yaw_current; // spin this much
         spin_angle = min_spin(spin_angle);// but what if this angle is > pi?  then go the other way
 
-        ROS_INFO("spin angle %f; then travel distance %f", spin_angle, travel_distance);
+        ROS_INFO("spin angle %f; then travel distance %f \n", spin_angle, travel_distance);
         do_spin(spin_angle); // carry out this incremental action
 		// Assume no errors in actuation, and so say that current pose is just last position plus desired location
 		g_current_pose.orientation = pose_desired.orientation; // assumes got to desired orientation precisely

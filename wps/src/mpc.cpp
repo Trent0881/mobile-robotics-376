@@ -49,27 +49,27 @@ int main(int argc, char **argv) {
     // Additional poses to push to service
 
     // 
-    quat = convertPlanarPhi2Quaternion(1.57);
+    quat = convertPlanarPhi2Quaternion(1.5707);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.y = 1.8;
+    pose_stamped.pose.position.y = 3;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
 
     // 
     quat = convertPlanarPhi2Quaternion(0);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.x = 2.4;
+    pose_stamped.pose.position.x = 6.5;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
 
     // 
-    quat = convertPlanarPhi2Quaternion(0);
+    quat = convertPlanarPhi2Quaternion(1.5707);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.y = 2.5;
+    pose_stamped.pose.position.y = 12;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
 
     // 
-    quat = convertPlanarPhi2Quaternion(0);
+    quat = convertPlanarPhi2Quaternion(3.14159);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.x = -2;
+    pose_stamped.pose.position.x = 0;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
     
     // Finally ask the server to initiate that path
