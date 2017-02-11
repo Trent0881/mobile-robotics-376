@@ -63,13 +63,25 @@ int main(int argc, char **argv) {
     // 
     quat = convertPlanarPhi2Quaternion(1.5707);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.y = 12;
+    pose_stamped.pose.position.y = 11;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
 
     // 
     quat = convertPlanarPhi2Quaternion(3.14159);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.x = 0;
+    pose_stamped.pose.position.x = 3;
+    path_srv.request.nav_path.poses.push_back(pose_stamped);
+
+    // 
+    quat = convertPlanarPhi2Quaternion(1.5707);
+    pose_stamped.pose.orientation = quat;   
+    pose_stamped.pose.position.y = 12.5;
+    path_srv.request.nav_path.poses.push_back(pose_stamped);
+
+    // 
+    quat = convertPlanarPhi2Quaternion(3.14159);
+    pose_stamped.pose.orientation = quat;   
+    pose_stamped.pose.position.x = 1;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
     
     // Finally ask the server to initiate that path
