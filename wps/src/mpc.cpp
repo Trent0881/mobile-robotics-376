@@ -51,7 +51,19 @@ int main(int argc, char **argv) {
     // 
     quat = convertPlanarPhi2Quaternion(1.57);
     pose_stamped.pose.orientation = quat;   
-    pose_stamped.pose.position.x = 1.65;
+    pose_stamped.pose.position.x = 1.8;
+    path_srv.request.nav_path.poses.push_back(pose_stamped);
+
+    // 
+    quat = convertPlanarPhi2Quaternion(0);
+    pose_stamped.pose.orientation = quat;   
+    pose_stamped.pose.position.y = 1;
+    path_srv.request.nav_path.poses.push_back(pose_stamped);
+
+    // 
+    quat = convertPlanarPhi2Quaternion(0);
+    pose_stamped.pose.orientation = quat;   
+    pose_stamped.pose.position.x = 1;
     path_srv.request.nav_path.poses.push_back(pose_stamped);
 
     // 
