@@ -2,8 +2,8 @@
 // Written by Trent Ziemer 2/21/2017, heavily based on work from Dr. Wyatt Newman
 
 #include <ros/ros.h>
-#include <actionlib/client/simple_action_client.h>
-#include <example_action_server/demoAction.h>
+#include <actionlib/server/simple_action_server.h>
+#include <pas/moveAction.h>
 
 int g_count = 0;
 bool g_count_failure = false;
@@ -16,12 +16,12 @@ private:
     // this class will own a "SimpleActionServer" called "as_".
     // it will communicate using messages defined in example_action_server/action/demo.action
     // the type "demoAction" is auto-generated from our name "demo" and generic name "Action"
-    actionlib::SimpleActionServer<example_action_server::demoAction> as_;
+    actionlib::SimpleActionServer<pas::moveAction> as_;
     
     // here are some message types to communicate with our client(s)
-    example_action_server::demoGoal goal_; // goal message, received from client
-    example_action_server::demoResult result_; // put results here, to be sent back to the client when done w/ goal
-    example_action_server::demoFeedback feedback_; // not used in this example; 
+    pas::moveGoal goal_; // goal message, received from client
+    pas::moveResult result_; // put results here, to be sent back to the client when done w/ goal
+    pas::moveFeedback feedback_; // not used in this example; 
     // would need to use: as_.publishFeedback(feedback_); to send incremental feedback to the client
 
 public:
@@ -30,7 +30,7 @@ public:
     ~ExampleActionServer(void) {
     }
     // Action Interface
-    void executeCB(const actionlib::SimpleActionServer<example_action_server::demoAction>::GoalConstPtr& goal);
+    void executeCB(const actionlib::SimpleActionServer<pas::moveAction>::GoalConstPtr& goal);
 };
 
 //implementation of the constructor:
@@ -62,7 +62,7 @@ ExampleActionServer::ExampleActionServer() :
 // defined in our package, "example_action_server", in the subdirectory "action", called "demo.action"
 // The name "demo" is prepended to other message types created automatically during compilation.
 // e.g.,  "demoAction" is auto-generated from (our) base name "demo" and generic name "Action"
-void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<example_action_server::demoAction>::GoalConstPtr& goal) {
+void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::moveAction>::GoalConstPtr& goal) {
     //ROS_INFO("in executeCB");
     //ROS_INFO("goal input is: %d", goal->input);
     //do work here: this is where your interesting code goes
