@@ -3,8 +3,11 @@
 	<!-- Play pen create -->
 	<include file="$(find stdr_launchers)/launch/server_with_map_and_gui_plus_robot.launch"/>
 	
-	<!-- HW client (mpc = my path client) and service (mps2 = my path service 2) nodes for navigating the play pen -->
-	<node type="mpc" pkg="wps" name="my_path_client" output="screen"/>
-	<node type="mps2" pkg="wps" name="my_path_service_2" output="screen"/>
+	<!-- Action client and server nodes for navigating the play pen -->
+	<node pkg="pas" type="as" name="my_action_server" output="screen"/>
+	<node pkg="pas" type="ac" name="my_action_client" output="screen"/>
+
+	<!-- Old LIDAR based alarm from a previous HW. Dont show on screen because it spams! -->
+	<node pkg="rc" type="lidar_alarm2" name="lidar_alarm2"/>
 
 </launch>
