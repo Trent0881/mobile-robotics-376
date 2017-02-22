@@ -1,223 +1,98 @@
-//path_service:
-// example showing how to receive a nav_msgs/Path request
-// run with complementary path_client
-// responds immediately to ack new path...but execution takes longer
+// Path Action Server
+// Written by Trent Ziemer 2/21/2017, heavily based on work from Dr. Wyatt Newman
 
-// this is a crude service; just assumes robot initial pose is 0,
-// and all subgoals are expressed with respect to this initial frame.
-// i.e., equivalent to expressing subgoals in odom frame
+#include<ros/ros.h>
+#include <actionlib/server/simple_action_server.h>
+//the following #include refers to the "action" message defined for this package
+// The action message can be found in: .../example_action_server/action/demo.action
+// Automated header generation creates multiple headers for message I/O
+// These are referred to by the root name (demo) and appended name (Action)
+#include<example_action_server/demoAction.h>
 
-#include <ros/ros.h>
-#include <example_ros_service/PathSrv.h>
-#include <nav_msgs/Path.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/Twist.h>
-#include <iostream>
-#include <string>
-#include <math.h>
-using namespace std;
-//some tunable constants, global
-const double g_move_speed = 1.0; // set forward speed to this value, e.g. 1m/s
-const double g_spin_speed = 1.0; // set yaw rate to this value, e.g. 1 rad/s
-const double g_sample_dt = 0.01;
-const double g_dist_tol = 0.01; // 1cm
-//global variables, including a publisher object
-geometry_msgs::Twist g_twist_cmd;
-ros::Publisher g_twist_commander; //global publisher object
-geometry_msgs::Pose g_current_pose; // not really true--should get this from odom 
+int g_count = 0;
+bool g_count_failure = false;
 
+class ExampleActionServer {
+private:
 
-// here are a few useful utility functions:
-double sgn(double x);
-double min_spin(double spin_angle);
-double convertPlanarQuat2Phi(geometry_msgs::Quaternion quaternion);
-geometry_msgs::Quaternion convertPlanarPhi2Quaternion(double phi);
+    ros::NodeHandle nh_;  // we'll need a node handle; get one upon instantiation
 
-void do_halt();
-void do_move(double distance);
-void do_spin(double spin_ang);
+    actionlib::SimpleActionServer<example_action_server::demoAction> as_;
+    
+    // here are some message types to communicate with our client(s)
+    example_action_server::demoGoal goal_; // goal message, received from client
+    example_action_server::demoResult result_; // put results here, to be sent back to the client when done w/ goal
+    example_action_server::demoFeedback feedback_; // not used in this example; 
+    // would need to use: as_.publishFeedback(feedback_); to send incremental feedback to the client
 
-//signum function: strip off and return the sign of the argument
-double sgn(double x) { if (x>0.0) {return 1.0; }
-    else if (x<0.0) {return -1.0;}
-    else {return 0.0;}
-}
+public:
+    ExampleActionServer(); //define the body of the constructor outside of class definition
 
-//a function to consider periodicity and find min delta angle
-double min_spin(double spin_angle) {
-        if (spin_angle>M_PI) {
-            spin_angle -= 2.0*M_PI;}
-        if (spin_angle< -M_PI) {
-            spin_angle += 2.0*M_PI;}
-         return spin_angle;   
-}            
+    ~ExampleActionServer(void) {
+    }
+    // Action Interface
+    void executeCB(const actionlib::SimpleActionServer<example_action_server::demoAction>::GoalConstPtr& goal);
+};
 
-// a useful conversion function: from quaternion to yaw
-double convertPlanarQuat2Phi(geometry_msgs::Quaternion quaternion) {
-    double quat_z = quaternion.z;
-    double quat_w = quaternion.w;
-    double phi = 2.0 * atan2(quat_z, quat_w); // cheap conversion from quaternion to heading for planar motion
-    return phi;
-}
+//implementation of the constructor:
+// member initialization list describes how to initialize member as_
+// member as_ will get instantiated with specified node-handle, name by which this server will be known,
+//  a pointer to the function to be executed upon receipt of a goal.
+//  
+// Syntax of naming the function to be invoked: get a pointer to the function, called executeCB, which is a member method
+// of our class exampleActionServer.  Since this is a class method, we need to tell boost::bind that it is a class member,
+// using the "this" keyword.  the _1 argument says that our executeCB takes one argument
+// the final argument  "false" says don't start the server yet.  (We'll do this in the constructor)
 
-//and the other direction:
-geometry_msgs::Quaternion convertPlanarPhi2Quaternion(double phi) {
-    geometry_msgs::Quaternion quaternion;
-    quaternion.x = 0.0;
-    quaternion.y = 0.0;
-    quaternion.z = sin(phi / 2.0);
-    quaternion.w = cos(phi / 2.0);
-    return quaternion;
-}
-
-// a few action functions:
-//a function to reorient by a specified angle (in radians), then halt
-void do_spin(double spin_ang) {
-    ros::Rate loop_timer(1/g_sample_dt);
-    double timer=0.0;
-    double final_time = fabs(spin_ang)/g_spin_speed;
-    g_twist_cmd.angular.z= sgn(spin_ang)*g_spin_speed;
-    while(timer<final_time) {
-          g_twist_commander.publish(g_twist_cmd);
-          timer+=g_sample_dt;
-          loop_timer.sleep(); 
-          }  
-    do_halt(); 
-}
-
-//a function to move forward by a specified distance (in meters), then halt
-void do_move(double distance) { // always assumes robot is already oriented properly
-                                // but allow for negative distance to mean move backwards
-    ros::Rate loop_timer(1/g_sample_dt);
-    double timer=0.0;
-    double final_time = fabs(distance)/g_move_speed;
-    g_twist_cmd.angular.z = 0.0; //stop spinning
-    g_twist_cmd.linear.x = sgn(distance)*g_move_speed;
-    while(timer<final_time) {
-          g_twist_commander.publish(g_twist_cmd);
-          timer+=g_sample_dt;
-          loop_timer.sleep(); 
-          }  
-    do_halt();
-}
-
-void do_halt() {
-    ros::Rate loop_timer(1/g_sample_dt);   
-    g_twist_cmd.angular.z= 0.0;
-    g_twist_cmd.linear.x=0.0;
-    for (int i=0;i<10;i++) {
-          g_twist_commander.publish(g_twist_cmd);
-          loop_timer.sleep(); 
-          }   
-}
-
-//THIS FUNCTION IS NOT FILLED IN: NEED TO COMPUTE HEADING AND TRAVEL DISTANCE TO MOVE
-//FROM START TO GOAL
-void get_yaw_and_dist(geometry_msgs::Pose current_pose, geometry_msgs::Pose goal_pose,double &dist, double &heading) {
- 
- dist = 0.0; //FALSE!!
- if (dist < g_dist_tol) { //too small of a motion, so just set the heading from goal heading
-   heading = convertPlanarQuat2Phi(goal_pose.orientation); 
- }
- else {
-    heading = 0.0; //FALSE!!
- }
-
-}
-
-bool callback(example_ros_service::PathSrvRequest& request, example_ros_service::PathSrvResponse& response)
+ExampleActionServer::ExampleActionServer() :
+   as_(nh_, "path_action", boost::bind(&ExampleActionServer::executeCB, this, _1),false) 
+  // Clients refer to the action servers name as "path_action" as opposed to "example_action"
 {
-    ROS_INFO("callback activated");
-    double yaw_desired, yaw_current, travel_distance, spin_angle;
-    geometry_msgs::Pose pose_desired;
-    int npts = request.nav_path.poses.size();
-    ROS_INFO("received path request with %d poses",npts);    
+    ROS_INFO("Starting exampleActionServer init from path action server node");
 
-    double current_x, current_y, new_x, new_y;
-    
-    for (int i=0;i<npts;i++) { //visit each subgoal
-        ROS_INFO("current (x,y) = (%f, %f)",g_current_pose.position.x,g_current_pose.position.y);
-        
-        // Retrieve the desired new pose
-        pose_desired = request.nav_path.poses[i].pose;
-        
-        // Retrieve current position coords
-        current_x = g_current_pose.position.x;
-        current_y = g_current_pose.position.y;
-        // Retrieve the new desired location
-        new_x = pose_desired.position.x;
-        new_y = pose_desired.position.y;
-
-        // Computer current and new yaws
-        yaw_current = convertPlanarQuat2Phi(g_current_pose.orientation); 
-        yaw_desired = convertPlanarQuat2Phi(pose_desired.orientation);
-        
-        ROS_INFO("pose %d: desired yaw = %f; desired (x,y) = (%f,%f)",i,yaw_desired, pose_desired.position.x,pose_desired.position.y); 
-
-        // Distance to travel is cartesian sum of X and Y change in distances
-        travel_distance = pow( pow(new_x - current_x, 2) + pow(new_y - current_y, 2), 0.5);
-        
-        // Print result for user to verify
-        ROS_INFO("travel distance = %f",travel_distance); 
-
-        // Calculate spin angle
-        spin_angle = yaw_desired - yaw_current; // spin this much
-        spin_angle = min_spin(spin_angle);// but what if this angle is > pi?  then go the other way
-
-        // Print result for user to verify
-        ROS_INFO("spin angle %f; then travel distance %f \n", spin_angle, travel_distance);
-
-        // JUST DO IT
-        do_spin(spin_angle);
-        // JUST DO IT
-        do_move(travel_distance);
-
-        // Assume no errors in actuation, and so say that current pose is just last position plus desired location
-        g_current_pose.orientation = pose_desired.orientation; // assumes got to desired orientation precisely
-        g_current_pose.position.x = new_x;
-        g_current_pose.position.y = new_y;
-        }
-
-  return true;
+    as_.start();
 }
 
-void do_inits(ros::NodeHandle &n) {
-  //initialize components of the twist command global variable
-    g_twist_cmd.linear.x=0.0;
-    g_twist_cmd.linear.y=0.0;    
-    g_twist_cmd.linear.z=0.0;
-    g_twist_cmd.angular.x=0.0;
-    g_twist_cmd.angular.y=0.0;
-    g_twist_cmd.angular.z=0.0;  
+void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<example_action_server::demoAction>::GoalConstPtr& goal) {
+    //ROS_INFO("in executeCB");
+    //ROS_INFO("goal input is: %d", goal->input);
+    //do work here: this is where your interesting code goes
     
-    //define initial position to be 0
-    g_current_pose.position.x = 0.0;
-    g_current_pose.position.y = 0.0;
-    g_current_pose.position.z = 0.0;
-    
-    // define initial heading to be "0"
-    g_current_pose.orientation.x = 0.0;
-    g_current_pose.orientation.y = 0.0;
-    g_current_pose.orientation.z = 0.0;
-    g_current_pose.orientation.w = 1.0;
-    
-    // we declared g_twist_commander as global, but never set it up; do that now that we have a node handle
-    g_twist_commander = n.advertise<geometry_msgs::Twist>("/robot0/cmd_vel", 1);    
+    g_count++; // keep track of total number of goals serviced since this server was started
+    result_.output = g_count; // we'll use the member variable result_, defined in our class
+    result_.goal_stamp = goal->input;
+   
+    // DEBUG: if client and server remain in sync, all is well--else whine and complain and quit
+    // NOTE: this is NOT generically useful code; server should be happy to accept new clients at any time, and
+    // no client should need to know how many goals the server has serviced to date
+    if (g_count != goal->input) {
+        ROS_WARN("hey--mismatch!");
+        ROS_INFO("g_count = %d; goal_stamp = %d", g_count, result_.goal_stamp);
+        g_count_failure = true; //set a flag to commit suicide
+        ROS_WARN("informing client of aborted goal");
+        as_.setAborted(result_); // tell the client we have given up on this goal; send the result message as well
+    }
+    else {
+         as_.setSucceeded(result_); // tell the client that we were successful acting on the request, and return the "result" message
+    }
 }
 
-int main(int argc, char **argv)
-{
-  ros::init(argc, argv, "path_service");
-  ros::NodeHandle n;
-  
-  // to clean up "main", do initializations in a separate function
-  // a poor-man's class constructor
-  do_inits(n); //pass in a node handle so this function can set up publisher with it
-  
-  // establish a service to receive path commands
-  ros::ServiceServer service = n.advertiseService("path_service", callback);
-  ROS_INFO("Ready to accept paths.");
-  ros::spin(); //callbacks do all the work now
+int main(int argc, char** argv) {
+    ros::init(argc, argv, "my_action_server"); // name this node 
 
-  return 0;
+    ROS_INFO("Starting the path action server node.");
+
+    ExampleActionServer as_object; 
+
+    ROS_INFO("Spinning PAS node");
+
+    // from here, all the work is done in the action server, with the interesting stuff done within "executeCB()"
+    // you will see 5 new topics under example_action: cancel, feedback, goal, result, status
+    while (!g_count_failure) {
+        ros::spinOnce(); //normally, can simply do: ros::spin();  
+        // for debug, induce a halt if we ever get our client/server communications out of sync
+    }
+
+    return 0;
 }
+
