@@ -1,95 +1,58 @@
-// pas: a simple action server
-// TZ
-#include<ros/ros.h>
-#include <actionlib/server/simple_action_server.h>
-//the following #include refers to the "action" message defined for this package
-// The action message can be found in: .../pas/action/move.action
-#include<pas/moveAction.h>
+// Path Action Client
+// Written by Trent Ziemer 2/21/2017, heavily based on work from Dr. Wyatt Newman
 
-int g_count = 0;
-bool g_count_failure = false;
+#include <ros/ros.h>
+#include <actionlib/client/simple_action_client.h>
+// #include <example_action_server/demoAction.h>
+#include <pas/moveAction.h>
 
-class ExampleActionServer {
-private:
-
-    ros::NodeHandle nh_;  // we'll need a node handle; get one upon instantiation
-
-    actionlib::SimpleActionServer<pas::moveAction> as_;
-    
-    // here are some message types to communicate with our client(s)
-    pas::moveGoal goal_; // goal message, received from client
-    pas::moveResult result_; // put results here, to be sent back to the client when done w/ goal
-    pas::moveFeedback feedback_; // not used in this example; 
-    // would need to use: as_.publishFeedback(feedback_); to send incremental feedback to the client
-
-public:
-    ExampleActionServer(); //define the body of the constructor outside of class definition
-
-    ~ExampleActionServer(void) {
-    }
-    // Action Interface
-    void executeCB(const actionlib::SimpleActionServer<pas::moveAction>::GoalConstPtr& goal);
-};
-
-//implementation of the constructor:
-// member initialization list describes how to initialize member as_
-// member as_ will get instantiated with specified node-handle, name by which this server will be known,
-//  a pointer to the function to be executed upon receipt of a goal.
-//  
-// Syntax of naming the function to be invoked: get a pointer to the function, called executeCB, which is a member method
-// of our class exampleActionServer.  Since this is a class method, we need to tell boost::bind that it is a class member,
-// using the "this" keyword.  the _1 argument says that our executeCB takes one argument
-// the final argument  "false" says don't start the server yet.  (We'll do this in the constructor)
-
-ExampleActionServer::ExampleActionServer() :
-   as_(nh_, "example_action", boost::bind(&ExampleActionServer::executeCB, this, _1),false) 
-// in the above initialization, we name the server "example_action"
-//  clients will need to refer to this name to connect with this server
-{
-    ROS_INFO("in constructor of exampleActionServer...");
-    // do any other desired initializations here...specific to your implementation
-
-    as_.start(); //start the server running
-}
-
-void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::moveAction>::GoalConstPtr& goal) {
-    //ROS_INFO("in executeCB");
-    //ROS_INFO("goal input is: %d", goal->input);
-    //do work here: this is where your interesting code goes
-    g_count++; // keep track of total number of goals serviced since this server was started
-    result_.output = g_count; // we'll use the member variable result_, defined in our class
-    result_.goal_stamp = goal->input;
-    
-    // the class owns the action server, so we can use its member methods here
-   
-    // DEBUG: if client and server remain in sync, all is well--else whine and complain and quit
-    // NOTE: this is NOT generically useful code; server should be happy to accept new clients at any time, and
-    // no client should need to know how many goals the server has serviced to date
-    if (g_count != goal->input) {
-        ROS_WARN("hey--mismatch!");
-        ROS_INFO("g_count = %d; goal_stamp = %d", g_count, result_.goal_stamp);
-        g_count_failure = true; //set a flag to commit suicide
-        ROS_WARN("informing client of aborted goal");
-        as_.setAborted(result_); // tell the client we have given up on this goal; send the result message as well
-    }
-    else {
-         as_.setSucceeded(result_); // tell the client that we were successful acting on the request, and return the "result" message
-    }
+void doneCb(const actionlib::SimpleClientGoalState& state,
+        const pas::moveResultConstPtr& result) {
+    ROS_INFO(" DoneCb: server responded with state [%s]", state.toString().c_str());
+    int diff = result->output - result->goal_stamp;
+    ROS_INFO("Result output from doneCb = %d; goal_stamp = %d; diff = %d", result->output, result->goal_stamp, diff);
 }
 
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "demo_action_server_node"); // name this node 
+    ros::init(argc, argv, "my_action_client"); // name this node 
+    int g_count = 0;
 
-    ROS_INFO("instantiating the demo action server: ");
+    // here is a "goal" object compatible with the server
+    pas::moveGoal goal;
 
-    ExampleActionServer as_object; // create an instance of the class "ExampleActionServer"
-    
-    ROS_INFO("going into spin");
-    // from here, all the work is done in the action server, with the interesting stuff done within "executeCB()"
-    // you will see 5 new topics under example_action: cancel, feedback, goal, result, status
-    while (!g_count_failure) {
-        ros::spinOnce(); //normally, can simply do: ros::spin();  
-        // for debug, induce a halt if we ever get our client/server communications out of sync
+    // use the name of our server, which is: example_action (named in pas.cpp)
+    // the "true" argument says that we want our new client to run as a separate thread (a good idea)
+    actionlib::SimpleActionClient<pas::moveAction> action_client("example_action", true);
+
+    // attempt to connect to the server:
+    ROS_INFO("Client is waiting for server");
+    bool server_exists = action_client.waitForServer(ros::Duration(5.0)); // wait for up to 5 seconds
+    // something odd in above: does not seem to wait for 5 seconds, but returns rapidly if server not running
+    //bool server_exists = action_client.waitForServer(); //wait forever
+
+    if (!server_exists) {
+        ROS_WARN("Client could not connect to server; halting");
+        return 0; // bail out; optionally, could print a warning message and retry
+    }
+
+    ROS_INFO("Client has connected to action server"); // if here, then we connected to the server;
+
+    while (true) {
+        g_count++;
+        goal.input = g_count; // this merely sequentially numbers the goals sent
+        //action_client.sendGoal(goal); // simple example--send goal, but do not specify callbacks
+        action_client.sendGoal(goal, &doneCb); // we could also name additional callback functions here, if desired
+        //    action_client.sendGoal(goal, &doneCb, &activeCb, &feedbackCb); //e.g., like this
+
+        bool finished_before_timeout = action_client.waitForResult(ros::Duration(5.0));
+        //bool finished_before_timeout = action_client.waitForResult(); // wait forever...
+        if (!finished_before_timeout) {
+            ROS_WARN("Client is giving up waiting on result for goal number %d", g_count);
+            return 0;
+        } else {
+            //if here, then server returned a result to us
+        }
+
     }
 
     return 0;

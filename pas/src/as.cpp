@@ -14,9 +14,7 @@ private:
     ros::NodeHandle nh_;  // we'll need a node handle; get one upon instantiation
 
     // this class will own a "SimpleActionServer" called "as_".
-    // it will communicate using messages defined in example_action_server/action/demo.action
-    // the type "demoAction" is auto-generated from our name "demo" and generic name "Action"
-    actionlib::SimpleActionServer<pas::moveAction> as_;
+	actionlib::SimpleActionServer<pas::moveAction> as_;
     
     // here are some message types to communicate with our client(s)
     pas::moveGoal goal_; // goal message, received from client
@@ -48,7 +46,7 @@ ExampleActionServer::ExampleActionServer() :
 // in the above initialization, we name the server "example_action"
 //  clients will need to refer to this name to connect with this server
 {
-    ROS_INFO("in constructor of exampleActionServer...");
+    ROS_INFO("Starting my action server (constructor)");
     // do any other desired initializations here...specific to your implementation
 
     as_.start(); //start the server running
@@ -67,14 +65,7 @@ void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::mov
     //ROS_INFO("goal input is: %d", goal->input);
     //do work here: this is where your interesting code goes
     
-    //....
-
-    // for illustration, populate the "result" message with two numbers:
-    // the "input" is the message count, copied from goal->input (as sent by the client)
-    // the "goal_stamp" is the server's count of how many goals it has serviced so far
-    // if there is only one client, and if it is never restarted, then these two numbers SHOULD be identical...
-    // unless some communication got dropped, indicating an error
-    // send the result message back with the status of "success"
+    ROS_INFO("Action server is executing a callback");
 
     g_count++; // keep track of total number of goals serviced since this server was started
     result_.output = g_count; // we'll use the member variable result_, defined in our class
@@ -98,18 +89,18 @@ void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::mov
 }
 
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "demo_action_server_node"); // name this node 
+    ros::init(argc, argv, "my_action_server"); // name this node 
 
-    ROS_INFO("instantiating the demo action server: ");
+    ROS_INFO("Starting my action server");
 
-    ExampleActionServer as_object; // create an instance of the class "ExampleActionServer"
+    ExampleActionServer as_object;
     
-    ROS_INFO("going into spin");
-    // from here, all the work is done in the action server, with the interesting stuff done within "executeCB()"
+    ROS_INFO("Spinning my action server");
+ 
     // you will see 5 new topics under example_action: cancel, feedback, goal, result, status
+    
     while (!g_count_failure) {
-        ros::spinOnce(); //normally, can simply do: ros::spin();  
-        // for debug, induce a halt if we ever get our client/server communications out of sync
+        ros::spinOnce(); 
     }
 
     return 0;
