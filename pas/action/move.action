@@ -1,11 +1,15 @@
-#goal definition
-#the lines with the hash signs are merely comments
-#goal, result and feedback are defined by this fixed order, and separated by 3 hyphens
+# Define goal message
 int32 input
+float32 x
+float32 y
+float32 theta
 ---
-#result definition
+# Define the result (done) message
 int32 output
 int32 goal_stamp
 ---
-#feedback
+# Define feedback message
 int32 fdbk
+float32 x
+float32 y
+float32 theta
