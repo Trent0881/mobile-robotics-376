@@ -5,8 +5,12 @@
 #include <actionlib/server/simple_action_server.h>
 #include <pas/moveAction.h>
 
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Twist.h>
+
 int g_count = 0;
 bool g_count_failure = false;
+geometry_msgs::Twist g_twist_cmd;
 
 class ExampleActionServer {
 private:
@@ -22,6 +26,8 @@ private:
     pas::moveFeedback feedback_; // not used in this example; 
     // would need to use: as_.publishFeedback(feedback_); to send incremental feedback to the client
 
+    int countdown_val_;
+
 public:
     ExampleActionServer(); //define the body of the constructor outside of class definition
 
@@ -29,17 +35,9 @@ public:
     }
     // Action Interface
     void executeCB(const actionlib::SimpleActionServer<pas::moveAction>::GoalConstPtr& goal);
+    void do_move(double distance);
+    void do_spin(double spin_ang);
 };
-
-//implementation of the constructor:
-// member initialization list describes how to initialize member as_
-// member as_ will get instantiated with specified node-handle, name by which this server will be known,
-//  a pointer to the function to be executed upon receipt of a goal.
-//  
-// Syntax of naming the function to be invoked: get a pointer to the function, called executeCB, which is a member method
-// of our class exampleActionServer.  Since this is a class method, we need to tell boost::bind that it is a class member,
-// using the "this" keyword.  the _1 argument says that our executeCB takes one argument
-// the final argument  "false" says don't start the server yet.  (We'll do this in the constructor)
 
 ExampleActionServer::ExampleActionServer() :
    as_(nh_, "example_action", boost::bind(&ExampleActionServer::executeCB, this, _1),false) 
@@ -52,39 +50,92 @@ ExampleActionServer::ExampleActionServer() :
     as_.start(); //start the server running
 }
 
-//executeCB implementation: this is a member method that will get registered with the action server
-// argument type is very long.  Meaning:
-// actionlib is the package for action servers
-// SimpleActionServer is a templated class in this package (defined in the "actionlib" ROS package)
-// <example_action_server::demoAction> customizes the simple action server to use our own "action" message 
-// defined in our package, "example_action_server", in the subdirectory "action", called "demo.action"
-// The name "demo" is prepended to other message types created automatically during compilation.
-// e.g.,  "demoAction" is auto-generated from (our) base name "demo" and generic name "Action"
+const double g_move_speed = 1.0; // set forward speed to this value, e.g. 1m/s
+const double g_spin_speed = 1.0; // set yaw rate to this value, e.g. 1 rad/s
+const double g_sample_dt = 0.01;
+
+ros::Publisher g_twist_commander; //global publisher object
+
+//signum function: strip off and return the sign of the argument
+double sgn(double x) { if (x>0.0) {return 1.0; }
+    else if (x<0.0) {return -1.0;}
+    else {return 0.0;}
+}
+
+void do_halt() {
+    ros::Rate loop_timer(1/g_sample_dt);   
+    g_twist_cmd.angular.z= 0.0;
+    g_twist_cmd.linear.x=0.0;
+    for (int i=0;i<10;i++) {
+          g_twist_commander.publish(g_twist_cmd);
+          loop_timer.sleep(); 
+          }   
+}
+
+void ExampleActionServer::do_move(double distance) {            
+    ros::Rate loop_timer(1/g_sample_dt);
+    double timer=0.0;
+    double final_time = fabs(distance)/g_move_speed;
+    g_twist_cmd.angular.z = 0.0; //stop spinning
+    g_twist_cmd.linear.x = sgn(distance)*g_move_speed;
+    while(timer<final_time) {
+          g_twist_commander.publish(g_twist_cmd);
+          timer+=g_sample_dt;
+          loop_timer.sleep(); 
+          }  
+    do_halt();
+}
+
+void ExampleActionServer::do_spin(double spin_ang) {
+    ros::Rate loop_timer(1/g_sample_dt);
+    double timer=0.0;
+    double final_time = fabs(spin_ang)/g_spin_speed;
+    g_twist_cmd.angular.z= sgn(spin_ang)*g_spin_speed;
+    while(timer<final_time) {
+          g_twist_commander.publish(g_twist_cmd);
+          timer+=g_sample_dt;
+
+		// each iteration, check if cancellation has been ordered
+		if (as_.isPreemptRequested()){	
+			ROS_WARN("Goal was pre-empted, cancelling!");
+			result_.result = 55;
+			as_.setAborted(result_);
+			return; 
+		}
+		ROS_INFO("Server providing feedback to client now");
+
+		feedback_.is_spinning = true;
+		as_.publishFeedback(feedback_);
+
+        loop_timer.sleep(); 
+    }  
+    do_halt(); 
+}
+
 void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::moveAction>::GoalConstPtr& goal) {
-    //ROS_INFO("in executeCB");
-    //ROS_INFO("goal input is: %d", goal->input);
-    //do work here: this is where your interesting code goes
-    
     ROS_INFO("Action server is executing a callback");
 
-    float x_goal = goal->x;
-    float y_goal = goal->y;
-    float theta  = goal->theta;
-    // Display received message to user
-    ROS_INFO("Goals: X = %f, Y = %f, Theta = %f", x_goal, y_goal, theta);
+    float x_goal = goal->x1;
+    float y_goal = goal->y1;
+    float theta  = goal->theta1;
 
-    g_count++; // keep track of total number of goals serviced since this server was started
-    result_.output = g_count; // we'll use the member variable result_, defined in our class
-    result_.goal_stamp = goal->input;
-    
-    // the class owns the action server, so we can use its member methods here
-   
-    // DEBUG: if client and server remain in sync, all is well--else whine and complain and quit
-    // NOTE: this is NOT generically useful code; server should be happy to accept new clients at any time, and
-    // no client should need to know how many goals the server has serviced to date
+    ROS_INFO("First pose goal: X = %f, Y = %f, Theta = %f", x_goal, y_goal, theta);
+
+    do_move(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5));
+    do_spin(theta);
+
+    x_goal = goal->x2;
+    y_goal = goal->y2;
+    theta  = goal->theta2;
+
+    ROS_INFO("Second pose goal: X = %f, Y = %f, Theta = %f", x_goal, y_goal, theta);
+
+    do_move(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5));
+    do_spin(theta);
+  
+	result_.result = 0;
+	    
     if (g_count != goal->input) {
-        ROS_WARN("hey--mismatch!");
-        ROS_INFO("g_count = %d; goal_stamp = %d", g_count, result_.goal_stamp);
         g_count_failure = true; //set a flag to commit suicide
         ROS_WARN("informing client of aborted goal");
         as_.setAborted(result_); // tell the client we have given up on this goal; send the result message as well
@@ -96,8 +147,12 @@ void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::mov
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "my_action_server"); // name this node 
-
+  	ros::NodeHandle nh;
+    
     ROS_INFO("Starting my action server");
+
+    // Publish twist commands for the robot to consume
+    g_twist_commander = nh.advertise<geometry_msgs::Twist>("/robot0/cmd_vel", 1);  
 
     ExampleActionServer as_object;
     

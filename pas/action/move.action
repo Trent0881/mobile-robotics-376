@@ -1,15 +1,14 @@
 # Define goal message
 int32 input
-float32 x
-float32 y
-float32 theta
+float32 x1
+float32 y1
+float32 theta1
+float32 x2
+float32 y2
+float32 theta2
 ---
 # Define the result (done) message
-int32 output
-int32 goal_stamp
+int32 result
 ---
 # Define feedback message
-int32 fdbk
-float32 x
-float32 y
-float32 theta
+bool is_spinning
