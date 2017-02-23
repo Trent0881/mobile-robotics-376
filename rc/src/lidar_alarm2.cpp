@@ -7,7 +7,7 @@
 #include <std_msgs/Bool.h> // boolean message
 
 // CHanged by TZ
-const double MIN_SAFE_DISTANCE = 0.4; // set alarm
+const double MIN_SAFE_DISTANCE = 0.3; // set alarm
 
 // these values to be set within the laser callback
 float ping_dist_in_front_=3.0; // global var to hold length of a SINGLE LIDAR ping--in front
@@ -40,8 +40,8 @@ void laserCallback(const sensor_msgs::LaserScan& laser_scan) {
     }
 
     // Constants for how many pings on either side to check (in addition to the middle one)
-    int left_offset = -10;
-    int right_offset = 10;
+    int left_offset = -6;
+    int right_offset = 6;
     // Boolean holding variable to OR the results from each ping check
     bool unsafe_ping = false;
 

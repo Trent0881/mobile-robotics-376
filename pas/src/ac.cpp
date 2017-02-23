@@ -85,13 +85,15 @@ int main(int argc, char** argv) {
         if(spin == false && go == true)
         {
             ROS_INFO("GOING");
+            // First pose to go to
             goal.x1 = 0.5; 
             goal.y1 = 1.5; 
             goal.theta1 = 3.14159/2; 
 
-            goal.x2 = -0.5; 
-            goal.y2 = 0; 
-            goal.theta2 = -3.14159/2; 
+            // Second pose to go to
+            goal.x2 = 0.1; 
+            goal.y2 = 0.9; 
+            goal.theta2 = -3.14159/2;
 
             action_client.sendGoal(goal, &doneCb, &activeCb, &feedbackCb); 
 
@@ -101,11 +103,16 @@ int main(int argc, char** argv) {
             {
                 ros::spinOnce();
             }
+            // Only if we detected an obstacle should we change states to start spinning
             if (g_obstacle_detected == true)
             {
                 spin = true;
                 go = false;
             }
+            // Reset input for state machine
+            g_done_with_goal = false;
+            g_obstacle_detected = false;
+
         }
         else if(spin == true && go == false)
         {
@@ -114,11 +121,11 @@ int main(int argc, char** argv) {
 
                 goal.x1 = 0; 
                 goal.y1 = 0; 
-                goal.theta1 = 3.14159/4; 
+                goal.theta1 = -0.2; 
 
                 goal.x2 = 0; 
                 goal.y2 = 0; 
-                goal.theta2 = 3.14159/4; 
+                goal.theta2 = -0.2; 
                 ROS_INFO("SENDING TURN GOAL");
                 action_client.sendGoal(goal, &doneCb);
 
@@ -129,6 +136,9 @@ int main(int argc, char** argv) {
                 }
                 spin = false;
                 go = true;
+                // Reset input for state machine
+                g_done_with_goal = false;
+                g_obstacle_detected = false;
         }
         else
         {

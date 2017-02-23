@@ -142,8 +142,59 @@ void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::mov
     y_goal = goal->y2;
     theta  = goal->theta2;
 
-    ROS_INFO("NO GO YET Second pose goal: X = %f, Y = %f, Theta = %f", x_goal, y_goal, theta);
+    ROS_INFO("Second pose goal: X = %f, Y = %f, Theta = %f", x_goal, y_goal, theta);
 
+
+    ros::Rate loop_timer(1/g_sample_dt);
+    double timer=0.0;
+    double final_time = fabs(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5))/g_move_speed;
+    g_twist_cmd.angular.z = 0.0;
+    g_twist_cmd.linear.x = sgn(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5))*g_move_speed;
+    while(timer<final_time) {
+		// each iteration, check if cancellation has been ordered
+		if (as_.isPreemptRequested()){	
+			ROS_WARN("Goal was pre-empted, cancelling!");
+			result_.result = 44;
+			as_.setAborted(result_);
+			return; 
+		}
+		ROS_INFO("Server providing feedback to client now");
+		
+		ROS_INFO("MOVING timer: %f", timer);
+		g_twist_commander.publish(g_twist_cmd);
+		timer+=g_sample_dt;
+		feedback_.is_spinning = false;
+		as_.publishFeedback(feedback_);
+        loop_timer.sleep(); 
+    }  
+
+    // Make sure to stop afterwards
+    do_halt();
+
+    timer=0.0;
+    final_time = fabs(theta)/g_spin_speed;
+    g_twist_cmd.linear.x = 0.0;
+    g_twist_cmd.angular.z= sgn(theta)*g_spin_speed;
+    while(timer<final_time) {
+		// each iteration, check if cancellation has been ordered
+		if (as_.isPreemptRequested()){	
+			ROS_WARN("Goal was pre-empted, cancelling!");
+			result_.result = 55;
+			as_.setAborted(result_);
+			return; 
+		}
+		ROS_INFO("Server providing feedback to client now");
+		
+		ROS_INFO("SPINNING timer: %f", timer);
+		g_twist_commander.publish(g_twist_cmd);
+		timer+=g_sample_dt;
+		feedback_.is_spinning = false;
+		as_.publishFeedback(feedback_);
+        loop_timer.sleep(); 
+    }  
+
+    // Make sure to stop afterwards
+    do_halt(); 
 
 	result_.result = 0;
 	    
