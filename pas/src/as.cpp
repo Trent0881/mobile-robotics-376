@@ -67,6 +67,12 @@ void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::mov
     
     ROS_INFO("Action server is executing a callback");
 
+    float x_goal = goal->x;
+    float y_goal = goal->y;
+    float theta  = goal->theta;
+    // Display received message to user
+    ROS_INFO("Goals: X = %f, Y = %f, Theta = %f", x_goal, y_goal, theta);
+
     g_count++; // keep track of total number of goals serviced since this server was started
     result_.output = g_count; // we'll use the member variable result_, defined in our class
     result_.goal_stamp = goal->input;

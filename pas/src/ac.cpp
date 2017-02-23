@@ -38,10 +38,11 @@ int main(int argc, char** argv) {
     ROS_INFO("Client has connected to action server"); // if here, then we connected to the server;
 
     while (true) {
-        g_count++;
-        goal.input = g_count; // this merely sequentially numbers the goals sent
-        //action_client.sendGoal(goal); // simple example--send goal, but do not specify callbacks
-        action_client.sendGoal(goal, &doneCb); // we could also name additional callback functions here, if desired
+        goal.x = 5; 
+        goal.y = 1; 
+        goal.theta = 3; 
+
+        action_client.sendGoal(goal, &doneCb); 
         //    action_client.sendGoal(goal, &doneCb, &activeCb, &feedbackCb); //e.g., like this
 
         bool finished_before_timeout = action_client.waitForResult(ros::Duration(5.0));
