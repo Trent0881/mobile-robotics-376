@@ -50,8 +50,8 @@ ExampleActionServer::ExampleActionServer() :
     as_.start(); //start the server running
 }
 
-const double g_move_speed = 1.0; // set forward speed to this value, e.g. 1m/s
-const double g_spin_speed = 1.0; // set yaw rate to this value, e.g. 1 rad/s
+const double g_move_speed = 0.2; // set forward speed to this value, e.g. 1m/s
+const double g_spin_speed = 0.2; // set yaw rate to this value, e.g. 1 rad/s
 const double g_sample_dt = 0.01;
 
 ros::Publisher g_twist_commander; //global publisher object
@@ -72,45 +72,7 @@ void do_halt() {
           }   
 }
 
-void ExampleActionServer::do_move(double distance) {            
-    ros::Rate loop_timer(1/g_sample_dt);
-    double timer=0.0;
-    double final_time = fabs(distance)/g_move_speed;
-    g_twist_cmd.angular.z = 0.0; //stop spinning
-    g_twist_cmd.linear.x = sgn(distance)*g_move_speed;
-    while(timer<final_time) {
-          g_twist_commander.publish(g_twist_cmd);
-          timer+=g_sample_dt;
-          loop_timer.sleep(); 
-          }  
-    do_halt();
-}
 
-void ExampleActionServer::do_spin(double spin_ang) {
-    ros::Rate loop_timer(1/g_sample_dt);
-    double timer=0.0;
-    double final_time = fabs(spin_ang)/g_spin_speed;
-    g_twist_cmd.angular.z= sgn(spin_ang)*g_spin_speed;
-    while(timer<final_time) {
-          g_twist_commander.publish(g_twist_cmd);
-          timer+=g_sample_dt;
-
-		// each iteration, check if cancellation has been ordered
-		if (as_.isPreemptRequested()){	
-			ROS_WARN("Goal was pre-empted, cancelling!");
-			result_.result = 55;
-			as_.setAborted(result_);
-			return; 
-		}
-		ROS_INFO("Server providing feedback to client now");
-
-		feedback_.is_spinning = true;
-		as_.publishFeedback(feedback_);
-
-        loop_timer.sleep(); 
-    }  
-    do_halt(); 
-}
 
 void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::moveAction>::GoalConstPtr& goal) {
     ROS_INFO("Action server is executing a callback");
@@ -121,28 +83,72 @@ void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::mov
 
     ROS_INFO("First pose goal: X = %f, Y = %f, Theta = %f", x_goal, y_goal, theta);
 
-    do_move(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5));
-    do_spin(theta);
+
+    ros::Rate loop_timer(1/g_sample_dt);
+    double timer=0.0;
+    double final_time = fabs(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5))/g_move_speed;
+    g_twist_cmd.angular.z = 0.0;
+    g_twist_cmd.linear.x = sgn(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5))*g_move_speed;
+    while(timer<final_time) {
+		// each iteration, check if cancellation has been ordered
+		if (as_.isPreemptRequested()){	
+			ROS_WARN("Goal was pre-empted, cancelling!");
+			result_.result = 44;
+			as_.setAborted(result_);
+			return; 
+		}
+		ROS_INFO("Server providing feedback to client now");
+		
+		ROS_INFO("MOVING timer: %f", timer);
+		g_twist_commander.publish(g_twist_cmd);
+		timer+=g_sample_dt;
+		feedback_.is_spinning = false;
+		as_.publishFeedback(feedback_);
+        loop_timer.sleep(); 
+    }  
+
+    // Make sure to stop afterwards
+    do_halt();
+
+    timer=0.0;
+    final_time = fabs(theta)/g_spin_speed;
+    g_twist_cmd.linear.x = 0.0;
+    g_twist_cmd.angular.z= sgn(theta)*g_spin_speed;
+    while(timer<final_time) {
+		// each iteration, check if cancellation has been ordered
+		if (as_.isPreemptRequested()){	
+			ROS_WARN("Goal was pre-empted, cancelling!");
+			result_.result = 55;
+			as_.setAborted(result_);
+			return; 
+		}
+		ROS_INFO("Server providing feedback to client now");
+		
+		ROS_INFO("SPINNING timer: %f", timer);
+		g_twist_commander.publish(g_twist_cmd);
+		timer+=g_sample_dt;
+		feedback_.is_spinning = false;
+		as_.publishFeedback(feedback_);
+        loop_timer.sleep(); 
+    }  
+
+    // Make sure to stop afterwards
+    do_halt(); 
+
+
+    /// SECOND POSE
 
     x_goal = goal->x2;
     y_goal = goal->y2;
     theta  = goal->theta2;
 
-    ROS_INFO("Second pose goal: X = %f, Y = %f, Theta = %f", x_goal, y_goal, theta);
+    ROS_INFO("NO GO YET Second pose goal: X = %f, Y = %f, Theta = %f", x_goal, y_goal, theta);
 
-    do_move(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5));
-    do_spin(theta);
-  
+
 	result_.result = 0;
 	    
-    if (g_count != goal->input) {
-        g_count_failure = true; //set a flag to commit suicide
-        ROS_WARN("informing client of aborted goal");
-        as_.setAborted(result_); // tell the client we have given up on this goal; send the result message as well
-    }
-    else {
-         as_.setSucceeded(result_); // tell the client that we were successful acting on the request, and return the "result" message
-    }
+    as_.setSucceeded(result_); // tell the client that we were successful acting on the request, and return the "result" message
+
 }
 
 int main(int argc, char** argv) {

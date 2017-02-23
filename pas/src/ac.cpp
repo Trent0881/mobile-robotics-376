@@ -7,24 +7,29 @@
 #include <pas/moveAction.h>
 #include <std_msgs/Bool.h> 
 
-bool g_allClear;
+bool g_obstacle_detected;
+bool g_done_with_goal;
 
 void doneCb(const actionlib::SimpleClientGoalState& state,
         const pas::moveResultConstPtr& result) {
     ROS_INFO(" DoneCb: server responded with state [%s]", state.toString().c_str());
-
+    g_done_with_goal = true;
     ROS_INFO("Result output from doneCb = %d", result->result);
 }
 
 void activeCb() {
-    ROS_INFO(" Active Callback: server responded with stat");
-
-    ROS_INFO("Result output from activeCb =");}
+    ROS_INFO("Active Callback");
+}
 
 void feedbackCb(const pas::moveFeedbackConstPtr& feedback) {
-    ROS_INFO(" Feedback Callback: server responded with ...");
-
-    ROS_INFO("Result output from feedbackCb = %d", feedback->is_spinning);
+    if(feedback->is_spinning == true)
+    {
+        ROS_INFO("Server gives feedback that we are IN FACT SPINNING"); 
+    }
+    else
+    {
+        ROS_INFO("Server gives feedback that we are NOT SPINNING"); 
+    }
 }
 
 void lidarAlarm(const std_msgs::Bool obstacleDetected)
@@ -32,11 +37,11 @@ void lidarAlarm(const std_msgs::Bool obstacleDetected)
     // If lidar alarm detects an obstacles, the path is no longer all clear
     if(obstacleDetected.data == true)
     {
-        g_allClear = false;
+        g_obstacle_detected = true;
     }
     else
     {
-        g_allClear = true;
+        g_obstacle_detected = false;
     }
 }
 
@@ -44,6 +49,8 @@ void lidarAlarm(const std_msgs::Bool obstacleDetected)
 int main(int argc, char** argv) {
     ros::init(argc, argv, "my_action_client");
 
+
+    
     ros::NodeHandle nh;
 
     // We want to listen for any notification of obstacles from the lidar alarm
@@ -66,31 +73,67 @@ int main(int argc, char** argv) {
 
     ROS_INFO("Client has connected to action server");
 
+    // Global feedback to change states
+    g_done_with_goal = false;
+    g_obstacle_detected = false;
+
+    // Client states for the robot to be in (go forward or spin to avoid an obstacle)
+    bool go = true;
+    bool spin = false;
+
     while (true) {
-        goal.x1 = 0.5; 
-        goal.y1 = 1.5; 
-        goal.theta1 = 3.14159/2; 
-
-        goal.x2 = -0.5; 
-        goal.y2 = 0; 
-        goal.theta2 = -3.14159/2; 
-
-        action_client.sendGoal(goal, &doneCb, &activeCb, &feedbackCb); 
-
-        while(1)
+        if(spin == false && go == true)
         {
-            if(g_allClear == true)
-            {
-                ROS_INFO("ALL CLEAR");
-            }
-            else
-            {
-                ROS_INFO("OBSTACLE");
-                action_client.cancelAllGoals(); 
-            }
-            ros::spinOnce();
-        }
+            ROS_INFO("GOING");
+            goal.x1 = 0.5; 
+            goal.y1 = 1.5; 
+            goal.theta1 = 3.14159/2; 
 
+            goal.x2 = -0.5; 
+            goal.y2 = 0; 
+            goal.theta2 = -3.14159/2; 
+
+            action_client.sendGoal(goal, &doneCb, &activeCb, &feedbackCb); 
+
+
+            // Wait until either done with goal or an obstacle has been detected to proceed
+            while (g_done_with_goal == false && g_obstacle_detected == false)
+            {
+                ros::spinOnce();
+            }
+            if (g_obstacle_detected == true)
+            {
+                spin = true;
+                go = false;
+            }
+        }
+        else if(spin == true && go == false)
+        {
+                ROS_INFO("OBSTACLE, cancelling goals");
+                action_client.cancelAllGoals(); 
+
+                goal.x1 = 0; 
+                goal.y1 = 0; 
+                goal.theta1 = 3.14159/4; 
+
+                goal.x2 = 0; 
+                goal.y2 = 0; 
+                goal.theta2 = 3.14159/4; 
+                ROS_INFO("SENDING TURN GOAL");
+                action_client.sendGoal(goal, &doneCb);
+
+                // Regardless of obstacle detection, wait until done rotating
+                while (g_done_with_goal == false)
+                {
+                    ros::spinOnce();
+                }
+                spin = false;
+                go = true;
+        }
+        else
+        {
+            ROS_INFO("INVALID STATE, CHECK LOGIC");
+        }
         // bool finished_before_timeout = action_client.waitForResult(ros::Duration(5.0));
     }
 
