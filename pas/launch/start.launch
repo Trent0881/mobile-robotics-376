@@ -1,7 +1,7 @@
 <launch>
 	
-	<!-- Play pen create -->
-	<include file="$(find stdr_launchers)/launch/server_with_map_and_gui_plus_robot.launch"/>
+	<!-- Play pen create 
+	<include file="$(find stdr_launchers)/launch/server_with_map_and_gui_plus_robot.launch"/>-->
 	
 	<!-- Action client and server nodes for navigating the play pen -->
 	<node pkg="pas" type="as" name="my_action_server" output="screen"/>
