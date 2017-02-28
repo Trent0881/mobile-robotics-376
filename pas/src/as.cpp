@@ -144,10 +144,8 @@ void ExampleActionServer::executeCB(const actionlib::SimpleActionServer<pas::mov
 
     ROS_INFO("Second pose goal: X = %f, Y = %f, Theta = %f", x_goal, y_goal, theta);
 
-
-    ros::Rate loop_timer(1/g_sample_dt);
-    double timer=0.0;
-    double final_time = fabs(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5))/g_move_speed;
+	timer=0.0;
+    final_time = fabs(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5))/g_move_speed;
     g_twist_cmd.angular.z = 0.0;
     g_twist_cmd.linear.x = sgn(pow( pow(x_goal, 2) + pow(y_goal, 2), 0.5))*g_move_speed;
     while(timer<final_time) {
