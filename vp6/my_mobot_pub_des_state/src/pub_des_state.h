@@ -23,6 +23,9 @@ const int DONE_W_SUBGOAL = 1;
 const int PURSUING_SUBGOAL = 2;
 const int HALTING = 3;
 
+// global variable to hold detection status
+
+
 class DesStatePublisher {
 private:
 
@@ -64,6 +67,8 @@ private:
     
     ros::Publisher desired_state_publisher_;
     ros::Publisher des_psi_publisher_;
+
+    ros::Subscriber lidar_alarm;
     
     //a trajectory-builder object; 
     TrajBuilder trajBuilder_; 
@@ -71,6 +76,7 @@ private:
     // member methods:
     void initializePublishers();
     void initializeServices();
+    void initializeSubscribers();
     bool estopServiceCallback(std_srvs::TriggerRequest& request, std_srvs::TriggerResponse& response);
     bool clearEstopServiceCallback(std_srvs::TriggerRequest& request, std_srvs::TriggerResponse& response);
     bool flushPathQueueCB(std_srvs::TriggerRequest& request, std_srvs::TriggerResponse& response);

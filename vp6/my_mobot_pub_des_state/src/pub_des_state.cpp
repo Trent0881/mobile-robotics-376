@@ -1,6 +1,7 @@
 #include "pub_des_state.h"
 //ExampleRosClass::ExampleRosClass(ros::NodeHandle* nodehandle):nh_(*nodehandle)
-
+    bool g_obstacle_detected;
+    
 DesStatePublisher::DesStatePublisher(ros::NodeHandle& nh) : nh_(nh) {
     //as_(nh, "pub_des_state_server", boost::bind(&DesStatePublisher::executeCB, this, _1),false) {
     //as_.start(); //start the server running
@@ -18,7 +19,6 @@ DesStatePublisher::DesStatePublisher(ros::NodeHandle& nh) : nh_(nh) {
     trajBuilder_.set_omega_max(omega_max_);
     path_move_tol_ = path_move_tol;
     trajBuilder_.set_path_move_tol_(path_move_tol_);
-    g_obstacle_detected = false;
     initializePublishers();
     initializeServices();
     initializeSubscribers();
@@ -52,8 +52,7 @@ void DesStatePublisher::initializeServices() {
             &DesStatePublisher::flushPathQueueCB, this);
     append_path_ = nh_.advertiseService("append_path_queue_service",
             &DesStatePublisher::appendPathQueueCB, this);
-    
-}
+    }
 
 //member helper function to set up publishers;
 
@@ -63,16 +62,7 @@ void DesStatePublisher::initializePublishers() {
     des_psi_publisher_ = nh_.advertise<std_msgs::Float64>("/desPsi", 1);
 }
 
-// Added by TZ
-void DesStatePublisher::initializeSubscribers() {
-    ROS_INFO("Initializing Subscribers");    
-    ros::Subscriber lidar_alarm = nh_.subscribe("/lidar_alarm", 1, lidarAlarm); 
-}
-
-// global variable to hold obstacle detection status
-bool g_obstacle_detected;
-
-// Callback function for above subscriber
+// Callback function for added subscriber
 void lidarAlarm(const std_msgs::Bool obstacleDetected)
 {
     // If lidar alarm detects an obstacles, the path is no longer all clear
@@ -84,6 +74,13 @@ void lidarAlarm(const std_msgs::Bool obstacleDetected)
     {
         g_obstacle_detected = false;
     }
+}
+
+// Added by TZ
+void DesStatePublisher::initializeSubscribers() {
+    ROS_INFO("Initializing Subscribers");    
+    lidar_alarm = nh_.subscribe("/lidar_alarm", 1, lidarAlarm); 
+    g_obstacle_detected = false;
 }
 
 bool DesStatePublisher::estopServiceCallback(std_srvs::TriggerRequest& request, std_srvs::TriggerResponse& response) {
