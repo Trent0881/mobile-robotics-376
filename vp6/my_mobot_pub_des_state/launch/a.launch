@@ -1,0 +1,14 @@
+<launch>
+	
+	<!-- Launch gazebo with nothing inside-->
+	<include file="$(find gazebo_ros)/launch/empty_world.launch" output=""/> 
+
+	<!-- Add mobot to gazebo world-->
+	<include file="$(find mobot_urdf)/launch/mobot.launch" output=""/> 
+
+	<!-- Start mobot controller -->
+	<node pkg="mobot_pub_des_state" type="open_loop_controller" name="open_loop_controller"/>
+
+	<!--  -->
+	<node pkg="my_mobot_pub_des_state" type="mobot_pub_des_state2" name="mobot_pub_des_state2" output="screen"/>
+</launch>

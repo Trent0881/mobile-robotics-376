@@ -407,6 +407,8 @@ void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
         std::vector<nav_msgs::Odometry> &vec_of_states) {
     //FINISH ME!
 
+    ROS_INFO("THIS IS THE BUILD BRAKE TRAJ FUNCTION BEING CALLED");
+
 }
 
 //main fnc of this library: constructs a spin-in-place reorientation to

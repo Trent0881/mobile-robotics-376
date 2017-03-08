@@ -18,8 +18,10 @@ DesStatePublisher::DesStatePublisher(ros::NodeHandle& nh) : nh_(nh) {
     trajBuilder_.set_omega_max(omega_max_);
     path_move_tol_ = path_move_tol;
     trajBuilder_.set_path_move_tol_(path_move_tol_);
+    g_obstacle_detected = false;
     initializePublishers();
     initializeServices();
+    initializeSubscribers();
     //define a halt state; zero speed and spin, and fill with viable coords
     halt_twist_.linear.x = 0.0;
     halt_twist_.linear.y = 0.0;
@@ -59,6 +61,29 @@ void DesStatePublisher::initializePublishers() {
     ROS_INFO("Initializing Publishers");
     desired_state_publisher_ = nh_.advertise<nav_msgs::Odometry>("/desState", 1, true);
     des_psi_publisher_ = nh_.advertise<std_msgs::Float64>("/desPsi", 1);
+}
+
+// Added by TZ
+void DesStatePublisher::initializeSubscribers() {
+    ROS_INFO("Initializing Subscribers");    
+    ros::Subscriber lidar_alarm = nh_.subscribe("/lidar_alarm", 1, lidarAlarm); 
+}
+
+// global variable to hold obstacle detection status
+bool g_obstacle_detected;
+
+// Callback function for above subscriber
+void lidarAlarm(const std_msgs::Bool obstacleDetected)
+{
+    // If lidar alarm detects an obstacles, the path is no longer all clear
+    if(obstacleDetected.data == true)
+    {
+        g_obstacle_detected = true;
+    }
+    else
+    {
+        g_obstacle_detected = false;
+    }
 }
 
 bool DesStatePublisher::estopServiceCallback(std_srvs::TriggerRequest& request, std_srvs::TriggerResponse& response) {
@@ -114,6 +139,7 @@ void DesStatePublisher::set_init_pose(double x, double y, double psi) {
 // or points can be appended to path queue w/ service append_path_
 
 void DesStatePublisher::pub_next_state() {
+
     // first test if an e-stop has been triggered
     if (e_stop_trigger_) {
         e_stop_trigger_ = false; //reset trigger
@@ -122,6 +148,7 @@ void DesStatePublisher::pub_next_state() {
         motion_mode_ = HALTING;
         traj_pt_i_ = 0;
         npts_traj_ = des_state_vec_.size();
+        ROS_INFO("TOLD TO ENTER E STOP STATE");
     }
     //or if an e-stop has been cleared
     if (e_stop_reset_) {
@@ -133,6 +160,29 @@ void DesStatePublisher::pub_next_state() {
         else {
             motion_mode_ = DONE_W_SUBGOAL; //this will pick up where left off
         }
+        ROS_INFO("TOLD TO CLEAR E STOP STATE");
+    }
+
+    // Probe to tell user what state is
+    if(motion_mode_ == 0)
+    {
+        ROS_INFO("E STOPPED");
+    }
+    else if(motion_mode_ == 1)
+    {
+        ROS_INFO("DONE W SUBGOAL");
+    }
+    else if(motion_mode_ == 2)
+    {
+        ROS_INFO("PURSUING SUBGOAL");
+    }
+    else if(motion_mode_ == 3)
+    {
+        ROS_INFO("HALTING");
+    }
+    else
+    {
+        ROS_INFO("Unknown motion mode state!");
     }
     
     //state machine; results in publishing a new desired state
