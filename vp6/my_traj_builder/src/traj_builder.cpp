@@ -360,7 +360,8 @@ void TrajBuilder::build_triangular_travel_traj(geometry_msgs::PoseStamped start_
 
 void TrajBuilder::build_triangular_spin_traj(geometry_msgs::PoseStamped start_pose,
         geometry_msgs::PoseStamped end_pose,
-        std::vector<nav_msgs::Odometry> &vec_of_states) {
+        std::vector<nav_msgs::Odometry> &vec_of_states) 
+{
     nav_msgs::Odometry des_state;
     des_state.header = start_pose.header; //really, want to copy the frame_id
     des_state.pose.pose = start_pose.pose; //start from here
@@ -405,16 +406,16 @@ void TrajBuilder::build_triangular_spin_traj(geometry_msgs::PoseStamped start_po
 //compute trajectory corresponding to applying max prudent decel to halt
 // Edited by TZ
 void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
-        std::vector<nav_msgs::Odometry> &vec_of_states) { 
-
-    ROS_WARN("BUILD BRAKE TRAJ FUNCTION BEING CALLED");
+        std::vector<nav_msgs::Odometry> &vec_of_states) 
+{ 
+    ROS_INFO("BUILD BRAKE TRAJ FUNCTION BEING CALLED");
 
     // Create an iterator at the beginning of the vector of states
     // We want to immediately go to the following states, so we insert the graceful stop states at the beginning
   	std::vector<nav_msgs::Odometry>::iterator beginning_of_states;
   	beginning_of_states = vec_of_states.begin();
 
-	std::vector<nav_msgs::Odometry> graceful_states
+	std::vector<nav_msgs::Odometry> graceful_states;
 
     nav_msgs::Odometry des_state;
     des_state.header = start_pose.header; //really, want to copy the frame_id
@@ -441,10 +442,6 @@ void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
         
         graceful_states.push_back(des_state);
     }
-    //make sure the last state is precisely where requested, and at rest:
-    des_state.pose.pose = end_pose.pose; //start from here
-    des_state.twist.twist = halt_twist_; // insist on starting from rest
-    graceful_states.push_back(des_state);
 
     // Retrieve graceful state vector iterators
     std::vector<nav_msgs::Odometry>::iterator beginning_of_graceful_states = graceful_states.begin();

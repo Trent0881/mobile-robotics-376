@@ -144,6 +144,13 @@ void DesStatePublisher::pub_next_state() {
         e_stop_trigger_ = true;
         g_obstacle_detected = false;
     }
+    else
+    {
+        if (!e_stop_trigger)
+        {
+            g_obstacle_detected = false;
+        }
+    }
 
     // first test if an e-stop has been triggered
     if (e_stop_trigger_) {
@@ -168,7 +175,7 @@ void DesStatePublisher::pub_next_state() {
         ROS_INFO("TOLD TO CLEAR E STOP STATE");
     }
 
-    if (false)
+    if (true)
     {
         // Probe to tell user what state is
         if(motion_mode_ == 0)
@@ -203,30 +210,38 @@ void DesStatePublisher::pub_next_state() {
         case HALTING: //e-stop service callback sets this mode
             //if need to brake from e-stop, service will have computed
             // new des_state_vec_, set indices and set motion mode;
-            current_des_state_ = des_state_vec_[traj_pt_i_];
+            current_des_state_ = des_state_vec_[0];
             current_des_state_.header.stamp = ros::Time::now();
             desired_state_publisher_.publish(current_des_state_);
             current_pose_.pose = current_des_state_.pose.pose;
             current_pose_.header = current_des_state_.header;
+
             des_psi_ = trajBuilder_.convertPlanarQuat2Psi(current_pose_.pose.orientation);
             float_msg_.data = des_psi_;
             des_psi_publisher_.publish(float_msg_); 
             
             traj_pt_i_++;
+
             //segue from braking to halted e-stop state;
-            if (traj_pt_i_ >= npts_traj_) { //here if completed all pts of braking traj
+            // CHECK IF VEC IS EMPTY
+            if (des_state_vec_.size() == 1) { //here if completed all pts of braking traj
                 halt_state_ = des_state_vec_.back(); //last point of halting traj
                 // make sure it has 0 twist
                 halt_state_.twist.twist = halt_twist_;
                 seg_end_state_ = halt_state_;
                 current_des_state_ = seg_end_state_;
-                motion_mode_ = E_STOPPED; //change state to remain halted                    
+                motion_mode_ = E_STOPPED; //change state to remain halted     
+                des_state_vec_.erase(des_state_vec_.begin());               
+            }
+            else
+            {
+                des_state_vec_.erase(des_state_vec_.begin());
             }
             break;
 
         case PURSUING_SUBGOAL: //if have remaining pts in computed traj, send them
             //extract the i'th point of our plan:
-            current_des_state_ = des_state_vec_[traj_pt_i_];
+            current_des_state_ = des_state_vec_[0];
             current_pose_.pose = current_des_state_.pose.pose;
             current_des_state_.header.stamp = ros::Time::now();
             desired_state_publisher_.publish(current_des_state_);
@@ -235,9 +250,12 @@ void DesStatePublisher::pub_next_state() {
             des_psi_ = trajBuilder_.convertPlanarQuat2Psi(current_pose_.pose.orientation);
             float_msg_.data = des_psi_;
             des_psi_publisher_.publish(float_msg_); 
-            traj_pt_i_++; // increment counter to prep for next point of plan
+
+            traj_pt_i_++; 
+
             //check if we have clocked out all of our planned states:
-            if (traj_pt_i_ >= npts_traj_) {
+            // CHECK IF VEC IS EMPTY
+            if (des_state_vec_.size() == 1) {
                 motion_mode_ = DONE_W_SUBGOAL; //if so, indicate we are done
                 seg_end_state_ = des_state_vec_.back(); // last state of traj
                 if (!path_queue_.empty()) { 
@@ -245,6 +263,11 @@ void DesStatePublisher::pub_next_state() {
                 }
                 ROS_INFO("reached a subgoal: x = %f, y= %f",current_pose_.pose.position.x,
                         current_pose_.pose.position.y);
+                des_state_vec_.erase(des_state_vec_.begin());
+            }
+            else
+            {
+                des_state_vec_.erase(des_state_vec_.begin());
             }
             break;
 
