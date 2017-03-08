@@ -403,11 +403,42 @@ void TrajBuilder::build_triangular_spin_traj(geometry_msgs::PoseStamped start_po
 
 //this function would be useful for planning a need for sudden braking
 //compute trajectory corresponding to applying max prudent decel to halt
+// Edited by TZ
 void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
         std::vector<nav_msgs::Odometry> &vec_of_states) {
     //FINISH ME!
 
     ROS_INFO("THIS IS THE BUILD BRAKE TRAJ FUNCTION BEING CALLED");
+
+    nav_msgs::Odometry des_state;
+    des_state.header = start_pose.header; //really, want to copy the frame_id
+    des_state.pose.pose = start_pose.pose; //start from here
+    des_state.twist.twist = halt_twist_; // insist on starting from rest
+    vec_of_states.push_back(des_state);
+    double psi_start = convertPlanarQuat2Psi(start_pose.pose.orientation);
+    double psi_end = convertPlanarQuat2Psi(start_pose.pose.orientation); // End angle = start angle
+    double dpsi = min_dang(psi_end - psi_start);
+    ROS_INFO("spin traj: psi_start = %f; psi_end = %f; dpsi= %f", psi_start, psi_end, dpsi);
+    double t_ramp = sqrt(fabs(dpsi) / alpha_max_);
+    int npts_ramp = round(t_ramp / dt_);
+    double psi_des = psi_start; //start from here
+    double omega_des = 0.0; // assumes spin starts from rest; 
+    // position of des_state will not change; only orientation and twist
+    double t = 0.0;
+    double accel = sgn(dpsi) * accel_max_; //watch out for sign: CW vs CCW rotation
+
+
+    for (int i = 0; i < npts_ramp; i++) {
+        omega_des -= accel*dt_; //Euler one-step integration
+        des_state.twist.twist.angular.z = omega_des;
+        psi_des += omega_des*dt_; //Euler one-step integration
+        des_state.pose.pose.orientation = convertPlanarPsi2Quaternion(psi_des);
+        vec_of_states.push_back(des_state);
+    }
+    //make sure the last state is precisely where requested, and at rest:
+    //des_state.pose.pose = end_pose.pose; //start from here
+    des_state.twist.twist = halt_twist_; // insist on starting from rest
+    vec_of_states.push_back(des_state);
 
 }
 

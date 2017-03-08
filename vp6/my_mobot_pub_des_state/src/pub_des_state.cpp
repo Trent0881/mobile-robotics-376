@@ -1,7 +1,7 @@
 #include "pub_des_state.h"
 //ExampleRosClass::ExampleRosClass(ros::NodeHandle* nodehandle):nh_(*nodehandle)
     bool g_obstacle_detected;
-    
+
 DesStatePublisher::DesStatePublisher(ros::NodeHandle& nh) : nh_(nh) {
     //as_(nh, "pub_des_state_server", boost::bind(&DesStatePublisher::executeCB, this, _1),false) {
     //as_.start(); //start the server running
@@ -62,7 +62,7 @@ void DesStatePublisher::initializePublishers() {
     des_psi_publisher_ = nh_.advertise<std_msgs::Float64>("/desPsi", 1);
 }
 
-// Callback function for added subscriber
+// Callback function for added subscriber - TZ
 void lidarAlarm(const std_msgs::Bool obstacleDetected)
 {
     // If lidar alarm detects an obstacles, the path is no longer all clear
@@ -137,6 +137,14 @@ void DesStatePublisher::set_init_pose(double x, double y, double psi) {
 
 void DesStatePublisher::pub_next_state() {
 
+    // If lidar alarm went off (so obst detected), then definitely trigger e stop.
+    // So now e stop trigger variable also holds all necessary info from lidar alarm, and we can reset obst detection var
+    if (g_obstacle_detected)
+    {
+        e_stop_trigger_ = true;
+        g_obstacle_detected = false;
+    }
+
     // first test if an e-stop has been triggered
     if (e_stop_trigger_) {
         e_stop_trigger_ = false; //reset trigger
@@ -160,27 +168,31 @@ void DesStatePublisher::pub_next_state() {
         ROS_INFO("TOLD TO CLEAR E STOP STATE");
     }
 
-    // Probe to tell user what state is
-    if(motion_mode_ == 0)
+    if (false)
     {
-        ROS_INFO("E STOPPED");
+        // Probe to tell user what state is
+        if(motion_mode_ == 0)
+        {
+            ROS_INFO("E STOPPED");
+        }
+        else if(motion_mode_ == 1)
+        {
+            ROS_INFO("DONE W SUBGOAL");
+        }
+        else if(motion_mode_ == 2)
+        {
+            ROS_INFO("PURSUING SUBGOAL");
+        }
+        else if(motion_mode_ == 3)
+        {
+            ROS_INFO("HALTING");
+        }
+        else
+        {
+            ROS_INFO("Unknown motion mode state!");
+        }    
     }
-    else if(motion_mode_ == 1)
-    {
-        ROS_INFO("DONE W SUBGOAL");
-    }
-    else if(motion_mode_ == 2)
-    {
-        ROS_INFO("PURSUING SUBGOAL");
-    }
-    else if(motion_mode_ == 3)
-    {
-        ROS_INFO("HALTING");
-    }
-    else
-    {
-        ROS_INFO("Unknown motion mode state!");
-    }
+
     
     //state machine; results in publishing a new desired state
     switch (motion_mode_) {

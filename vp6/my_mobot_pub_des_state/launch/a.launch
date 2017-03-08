@@ -12,6 +12,6 @@
 	<!-- Desired state publisher thing -->
 	<node pkg="my_mobot_pub_des_state" type="mobot_pub_des_state2" name="mobot_pub_des_state2" output="screen"/>
 
-	<!-- Run my lidar alarm-->
+	<!-- Run my lidar alarm -->
 	<node pkg="rc" type="lidar_alarm2" name="lidar_alarm2" output="screen"/>
 </launch>
