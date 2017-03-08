@@ -405,21 +405,26 @@ void TrajBuilder::build_triangular_spin_traj(geometry_msgs::PoseStamped start_po
 //compute trajectory corresponding to applying max prudent decel to halt
 // Edited by TZ
 void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
-        std::vector<nav_msgs::Odometry> &vec_of_states) {
+        std::vector<nav_msgs::Odometry> &vec_of_states) { 
 
-	vec_of_states.clear();
+    ROS_WARN("BUILD BRAKE TRAJ FUNCTION BEING CALLED");
 
-    ROS_WARN("THIS IS THE BUILD BRAKE TRAJ FUNCTION BEING CALLED");
+    // Create an iterator at the beginning of the vector of states
+    // We want to immediately go to the following states, so we insert the graceful stop states at the beginning
+  	std::vector<nav_msgs::Odometry>::iterator beginning_of_states;
+  	beginning_of_states = vec_of_states.begin();
+
+	std::vector<nav_msgs::Odometry> graceful_states
 
     nav_msgs::Odometry des_state;
     des_state.header = start_pose.header; //really, want to copy the frame_id
     des_state.pose.pose = start_pose.pose; //start from here
     des_state.twist.twist = halt_twist_; // insist on starting from rest
-    vec_of_states.push_back(des_state);
+    graceful_states.push_back(des_state);
     double psi_start = convertPlanarQuat2Psi(start_pose.pose.orientation);
     double psi_end = convertPlanarQuat2Psi(start_pose.pose.orientation); // End angle = start angle
     double dpsi = min_dang(psi_end - psi_start);
-    ROS_INFO("SPIN TRAJ: psi_start = %f; psi_end = %f; dpsi= %f", psi_start, psi_end, dpsi);
+    ROS_INFO("spin traj: psi_start = %f; psi_end = %f; dpsi= %f", psi_start, psi_end, dpsi);
     double t_ramp = sqrt(fabs(dpsi) / alpha_max_);
     int npts_ramp = round(t_ramp / dt_);
     double psi_des = psi_start; //start from here
@@ -428,20 +433,25 @@ void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
     double t = 0.0;
     double accel = sgn(dpsi) * accel_max_; //watch out for sign: CW vs CCW rotation
 
-
     for (int i = 0; i < npts_ramp; i++) {
         omega_des -= accel*dt_; //Euler one-step integration
         des_state.twist.twist.angular.z = omega_des;
         psi_des += omega_des*dt_; //Euler one-step integration
         des_state.pose.pose.orientation = convertPlanarPsi2Quaternion(psi_des);
-        vec_of_states.push_back(des_state);
+        
+        graceful_states.push_back(des_state);
     }
     //make sure the last state is precisely where requested, and at rest:
-    //des_state.pose.pose = end_pose.pose; //start from here
+    des_state.pose.pose = end_pose.pose; //start from here
     des_state.twist.twist = halt_twist_; // insist on starting from rest
-    vec_of_states.push_back(des_state);
-    	vec_of_states.clear();
-        ROS_INFO("FUNCTION npts = %d", vec_of_states.size());
+    graceful_states.push_back(des_state);
+
+    // Retrieve graceful state vector iterators
+    std::vector<nav_msgs::Odometry>::iterator beginning_of_graceful_states = graceful_states.begin();
+  	std::vector<nav_msgs::Odometry>::iterator end_of_graceful_states = graceful_states.end();
+
+  	// Insert ordered graceful state poses into the original vector of states at the BEGINNING
+    vec_of_states.insert(beginning_of_states, beginning_of_graceful_states, end_of_graceful_states);
 }
 
 //main fnc of this library: constructs a spin-in-place reorientation to
