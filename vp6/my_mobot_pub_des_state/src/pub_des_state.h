@@ -34,6 +34,7 @@ private:
     //some class member variables:
     nav_msgs::Path path_;
     std::vector<nav_msgs::Odometry> des_state_vec_;
+    std::vector<nav_msgs::Odometry> graceful_state_vec_;
     nav_msgs::Odometry des_state_;
     nav_msgs::Odometry halt_state_;
     nav_msgs::Odometry seg_end_state_;
