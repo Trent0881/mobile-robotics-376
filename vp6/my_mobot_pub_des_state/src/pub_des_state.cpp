@@ -1,6 +1,9 @@
 #include "pub_des_state.h"
-//ExampleRosClass::ExampleRosClass(ros::NodeHandle* nodehandle):nh_(*nodehandle)
-    bool g_obstacle_detected;
+
+ros::Subscriber lidar_alarm_sub;
+bool * obj_det;
+bool g_object_detected;
+bool triggered;
 
 DesStatePublisher::DesStatePublisher(ros::NodeHandle& nh) : nh_(nh) {
     //as_(nh, "pub_des_state_server", boost::bind(&DesStatePublisher::executeCB, this, _1),false) {
@@ -68,19 +71,22 @@ void lidarAlarm(const std_msgs::Bool obstacleDetected)
     // If lidar alarm detects an obstacles, the path is no longer all clear
     if(obstacleDetected.data == true)
     {
-        g_obstacle_detected = true;
+        *obj_det = true;
     }
     else
     {
-        g_obstacle_detected = false;
+        *obj_det = false;
     }
 }
+
+int last_mode;
 
 // Added by TZ
 void DesStatePublisher::initializeSubscribers() {
     ROS_INFO("Initializing Subscribers");    
-    lidar_alarm = nh_.subscribe("/lidar_alarm", 1, lidarAlarm); 
-    g_obstacle_detected = false;
+    lidar_alarm_sub = nh_.subscribe("/lidar_alarm", 1, lidarAlarm); 
+    obj_det = &g_object_detected;
+    triggered = false;
 }
 
 bool DesStatePublisher::estopServiceCallback(std_srvs::TriggerRequest& request, std_srvs::TriggerResponse& response) {
@@ -134,31 +140,27 @@ void DesStatePublisher::set_init_pose(double x, double y, double psi) {
 //   been reached
 // path queue can be flushed via service flush_path_queue_,
 // or points can be appended to path queue w/ service append_path_
-
 void DesStatePublisher::pub_next_state() {
 
-    // If lidar alarm went off (so obst detected), then definitely trigger e stop.
-    // So now e stop trigger variable also holds all necessary info from lidar alarm, and we can reset obst detection var
-    if (g_obstacle_detected)
+    if (g_object_detected == true && triggered == false)
     {
-        if (motion_mode_ != HALTING) // if halting, e stop trigger already set
-        {
-            e_stop_trigger_ = true;
-        }
+        triggered = true;
+        e_stop_trigger_ = true;
+        ROS_WARN("TRIGGERED");
     }
-    else
+    else if(g_object_detected == false && triggered == true)
     {
-        if (motion_mode_ != E_STOPPED) 
-        {
-             e_stop_reset_ = true;
-        }       
+        triggered = false;
+        e_stop_reset_ = true;
+        ROS_WARN("RESET");
     }
-
     // first test if an e-stop has been triggered
     if (e_stop_trigger_) {
         e_stop_trigger_ = false; //reset trigger
         //compute a halt trajectory
-        trajBuilder_.build_braking_traj(current_pose_, graceful_state_vec_);
+        next_pose_.pose = des_state_vec_[0].pose.pose;
+        next_pose_.header = des_state_vec_[0].header;
+        trajBuilder_.build_braking_traj(current_pose_, next_pose_, graceful_state_vec_);
         motion_mode_ = HALTING;
         traj_pt_i_ = 0;
         npts_traj_ = graceful_state_vec_.size();
@@ -202,13 +204,10 @@ void DesStatePublisher::pub_next_state() {
         }    
     }
 
-    
-    //state machine; results in publishing a new desired state
     switch (motion_mode_) {
         case E_STOPPED: //this state must be reset by a service
             desired_state_publisher_.publish(halt_state_);
             break;
-
         case HALTING: //e-stop service callback sets this mode
             //if need to brake from e-stop, service will have computed
             // new  GRACEFUL des_state_vec_, set indices and set motion mode;

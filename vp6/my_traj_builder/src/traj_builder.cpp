@@ -400,55 +400,59 @@ void TrajBuilder::build_triangular_spin_traj(geometry_msgs::PoseStamped start_po
     des_state.pose.pose = end_pose.pose; //start from here
     des_state.twist.twist = halt_twist_; // insist on starting from rest
     vec_of_states.push_back(des_state);
+
+    //make sure the last state is precisely where requested, and at rest:
+    des_state.pose.pose = end_pose.pose;
+    des_state.twist.twist = halt_twist_; // insist on starting from rest
+    vec_of_states.push_back(des_state);
 }
 
 //this function would be useful for planning a need for sudden braking
 //compute trajectory corresponding to applying max prudent decel to halt
 // Edited by TZ
 void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
+        geometry_msgs::PoseStamped end_pose,
         std::vector<nav_msgs::Odometry> &vec_of_states) 
 { 
-    ROS_INFO("BUILD BRAKE TRAJ FUNCTION BEING CALLED");
+    ROS_WARN("BUILD BRAKE TRAJ FUNCTION BEING CALLED");
 
-    // Create an iterator at the beginning of the vector of states
-    // We want to immediately go to the following states, so we insert the graceful stop states at the beginning
-  	std::vector<nav_msgs::Odometry>::iterator beginning_of_states;
-  	beginning_of_states = vec_of_states.begin();
-
-	std::vector<nav_msgs::Odometry> graceful_states;
-
+    double x_start = start_pose.pose.position.x;
+    double y_start = start_pose.pose.position.y;
+    double x_end = end_pose.pose.position.x;
+    double y_end = end_pose.pose.position.y;
+    double dx = x_end - x_start;
+    double dy = y_end - y_start;
+    double psi_des = atan2(dy, dx);
     nav_msgs::Odometry des_state;
     des_state.header = start_pose.header; //really, want to copy the frame_id
     des_state.pose.pose = start_pose.pose; //start from here
     des_state.twist.twist = halt_twist_; // insist on starting from rest
-    graceful_states.push_back(des_state);
-    double psi_start = convertPlanarQuat2Psi(start_pose.pose.orientation);
-    double psi_end = convertPlanarQuat2Psi(start_pose.pose.orientation); // End angle = start angle
-    double dpsi = min_dang(psi_end - psi_start);
-    ROS_INFO("spin traj: psi_start = %f; psi_end = %f; dpsi= %f", psi_start, psi_end, dpsi);
-    double t_ramp = sqrt(fabs(dpsi) / alpha_max_);
+    double trip_len = sqrt(dx * dx + dy * dy);
+    double t_ramp = sqrt(trip_len / accel_max_);
     int npts_ramp = round(t_ramp / dt_);
-    double psi_des = psi_start; //start from here
-    double omega_des = 0.0; // assumes spin starts from rest; 
-    // position of des_state will not change; only orientation and twist
+    double v_peak = accel_max_*t_ramp; // could consider special cases for reverse motion
+    double d_vel = alpha_max_*dt_; // incremental velocity changes for ramp-up
+
+    double x_des = x_start; //start from here
+    double y_des = y_start;
+    double speed_des = 0.0;
+    des_state.twist.twist.angular.z = 0.0; //omega_des; will not change
+    des_state.pose.pose.orientation = convertPlanarPsi2Quaternion(psi_des); //constant
+    // orientation of des_state will not change; only position and twist
     double t = 0.0;
-    double accel = sgn(dpsi) * accel_max_; //watch out for sign: CW vs CCW rotation
 
     for (int i = 0; i < npts_ramp; i++) {
-        omega_des -= accel*dt_; //Euler one-step integration
-        des_state.twist.twist.angular.z = omega_des;
-        psi_des += omega_des*dt_; //Euler one-step integration
-        des_state.pose.pose.orientation = convertPlanarPsi2Quaternion(psi_des);
-        
-        graceful_states.push_back(des_state);
+        speed_des -= accel_max_*dt_; //Euler one-step integration
+        des_state.twist.twist.linear.x = speed_des;
+        x_des += speed_des * dt_ * cos(psi_des); //Euler one-step integration
+        y_des += speed_des * dt_ * sin(psi_des); //Euler one-step integration        
+        des_state.pose.pose.position.x = x_des;
+        des_state.pose.pose.position.y = y_des;
+        vec_of_states.push_back(des_state);
     }
 
-    // Retrieve graceful state vector iterators
-    std::vector<nav_msgs::Odometry>::iterator beginning_of_graceful_states = graceful_states.begin();
-  	std::vector<nav_msgs::Odometry>::iterator end_of_graceful_states = graceful_states.end();
-
   	// Insert ordered graceful state poses into the original vector of states at the BEGINNING
-    vec_of_states.insert(beginning_of_states, beginning_of_graceful_states, end_of_graceful_states);
+    //vec_of_states.insert(beginning_of_states, graceful_states.begin(), graceful_states.end());
 }
 
 //main fnc of this library: constructs a spin-in-place reorientation to

@@ -23,9 +23,6 @@ const int DONE_W_SUBGOAL = 1;
 const int PURSUING_SUBGOAL = 2;
 const int HALTING = 3;
 
-// global variable to hold detection status
-
-
 class DesStatePublisher {
 private:
 
@@ -44,6 +41,7 @@ private:
     geometry_msgs::PoseStamped start_pose_;
     geometry_msgs::PoseStamped end_pose_;
     geometry_msgs::PoseStamped current_pose_;
+    geometry_msgs::PoseStamped next_pose_;
     std_msgs::Float64 float_msg_;
     double des_psi_;
     std::queue<geometry_msgs::PoseStamped> path_queue_; //a C++ "queue" object, stores vertices as Pose points in a FIFO queue
@@ -69,8 +67,6 @@ private:
     ros::Publisher desired_state_publisher_;
     ros::Publisher des_psi_publisher_;
 
-    ros::Subscriber lidar_alarm;
-    
     //a trajectory-builder object; 
     TrajBuilder trajBuilder_; 
 
