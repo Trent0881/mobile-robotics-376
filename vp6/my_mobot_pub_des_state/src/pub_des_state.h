@@ -2,7 +2,7 @@
 #define PUB_DES_STATE_H_
 
 #include <queue>
-#include <traj_builder/traj_builder.h> //has almost all the headers we need
+#include <my_traj_builder/my_traj_builder.h> //has almost all the headers we need
 #include <std_msgs/Float64.h>
 #include <std_msgs/Bool.h>
 #include <std_srvs/Trigger.h>

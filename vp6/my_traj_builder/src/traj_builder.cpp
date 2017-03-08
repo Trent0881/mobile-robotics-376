@@ -1,4 +1,4 @@
-#include<traj_builder/traj_builder.h>
+#include<my_traj_builder/my_traj_builder.h>
 
 //This library contains functions to build simple navigation trajectories.
 //The main function is: build_point_and_go_traj().  This function takes
@@ -406,9 +406,10 @@ void TrajBuilder::build_triangular_spin_traj(geometry_msgs::PoseStamped start_po
 // Edited by TZ
 void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
         std::vector<nav_msgs::Odometry> &vec_of_states) {
-    //FINISH ME!
 
-    ROS_INFO("THIS IS THE BUILD BRAKE TRAJ FUNCTION BEING CALLED");
+	vec_of_states.clear();
+
+    ROS_WARN("THIS IS THE BUILD BRAKE TRAJ FUNCTION BEING CALLED");
 
     nav_msgs::Odometry des_state;
     des_state.header = start_pose.header; //really, want to copy the frame_id
@@ -418,7 +419,7 @@ void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
     double psi_start = convertPlanarQuat2Psi(start_pose.pose.orientation);
     double psi_end = convertPlanarQuat2Psi(start_pose.pose.orientation); // End angle = start angle
     double dpsi = min_dang(psi_end - psi_start);
-    ROS_INFO("spin traj: psi_start = %f; psi_end = %f; dpsi= %f", psi_start, psi_end, dpsi);
+    ROS_INFO("SPIN TRAJ: psi_start = %f; psi_end = %f; dpsi= %f", psi_start, psi_end, dpsi);
     double t_ramp = sqrt(fabs(dpsi) / alpha_max_);
     int npts_ramp = round(t_ramp / dt_);
     double psi_des = psi_start; //start from here
@@ -439,7 +440,8 @@ void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
     //des_state.pose.pose = end_pose.pose; //start from here
     des_state.twist.twist = halt_twist_; // insist on starting from rest
     vec_of_states.push_back(des_state);
-
+    	vec_of_states.clear();
+        ROS_INFO("FUNCTION npts = %d", vec_of_states.size());
 }
 
 //main fnc of this library: constructs a spin-in-place reorientation to

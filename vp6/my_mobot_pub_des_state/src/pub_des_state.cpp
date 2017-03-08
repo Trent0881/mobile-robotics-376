@@ -153,7 +153,7 @@ void DesStatePublisher::pub_next_state() {
         motion_mode_ = HALTING;
         traj_pt_i_ = 0;
         npts_traj_ = des_state_vec_.size();
-        ROS_INFO("TOLD TO ENTER E STOP STATE");
+        ROS_INFO("TOLD TO ENTER E STOP STATE: npts = %d", npts_traj_);
     }
     //or if an e-stop has been cleared
     if (e_stop_reset_) {
