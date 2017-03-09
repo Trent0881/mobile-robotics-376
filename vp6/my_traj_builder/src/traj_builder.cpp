@@ -413,9 +413,7 @@ void TrajBuilder::build_triangular_spin_traj(geometry_msgs::PoseStamped start_po
 void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
         geometry_msgs::PoseStamped end_pose,
         std::vector<nav_msgs::Odometry> &vec_of_states) 
-{ 
-    ROS_WARN("BUILD BRAKE TRAJ FUNCTION BEING CALLED");
-
+{
     double x_start = start_pose.pose.position.x;
     double y_start = start_pose.pose.position.y;
     double x_end = end_pose.pose.position.x;
@@ -427,11 +425,14 @@ void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
     des_state.header = start_pose.header; //really, want to copy the frame_id
     des_state.pose.pose = start_pose.pose; //start from here
     des_state.twist.twist = halt_twist_; // insist on starting from rest
+    vec_of_states.push_back(des_state);
+
     double trip_len = sqrt(dx * dx + dy * dy);
     double t_ramp = sqrt(trip_len / accel_max_);
     int npts_ramp = round(t_ramp / dt_);
     double v_peak = accel_max_*t_ramp; // could consider special cases for reverse motion
     double d_vel = alpha_max_*dt_; // incremental velocity changes for ramp-up
+    double omega_des = 0.0; // assumes spin starts from rest; 
 
     double x_des = x_start; //start from here
     double y_des = y_start;
@@ -442,17 +443,23 @@ void TrajBuilder::build_braking_traj(geometry_msgs::PoseStamped start_pose,
     double t = 0.0;
 
     for (int i = 0; i < npts_ramp; i++) {
-        speed_des -= accel_max_*dt_; //Euler one-step integration
+    	ROS_INFO("HIT");
+    	// Translational
+        speed_des -= alpha_max_*dt_; //Euler one-step integration
         des_state.twist.twist.linear.x = speed_des;
         x_des += speed_des * dt_ * cos(psi_des); //Euler one-step integration
         y_des += speed_des * dt_ * sin(psi_des); //Euler one-step integration        
         des_state.pose.pose.position.x = x_des;
         des_state.pose.pose.position.y = y_des;
+
+        // Angular
+        omega_des -= accel_max_*dt_; //Euler one-step integration
+        des_state.twist.twist.angular.z = omega_des;
+        psi_des += omega_des*dt_; //Euler one-step integration
+        des_state.pose.pose.orientation = convertPlanarPsi2Quaternion(psi_des);
+       
         vec_of_states.push_back(des_state);
     }
-
-  	// Insert ordered graceful state poses into the original vector of states at the BEGINNING
-    //vec_of_states.insert(beginning_of_states, graceful_states.begin(), graceful_states.end());
 }
 
 //main fnc of this library: constructs a spin-in-place reorientation to

@@ -87,6 +87,7 @@ void DesStatePublisher::initializeSubscribers() {
     lidar_alarm_sub = nh_.subscribe("/lidar_alarm", 1, lidarAlarm); 
     obj_det = &g_object_detected;
     triggered = false;
+    traj_pt_i2_ = 0;
 }
 
 bool DesStatePublisher::estopServiceCallback(std_srvs::TriggerRequest& request, std_srvs::TriggerResponse& response) {
@@ -146,25 +147,27 @@ void DesStatePublisher::pub_next_state() {
     {
         triggered = true;
         e_stop_trigger_ = true;
-        ROS_WARN("TRIGGERED");
     }
     else if(g_object_detected == false && triggered == true)
     {
         triggered = false;
         e_stop_reset_ = true;
-        ROS_WARN("RESET");
     }
+
     // first test if an e-stop has been triggered
     if (e_stop_trigger_) {
         e_stop_trigger_ = false; //reset trigger
         //compute a halt trajectory
         next_pose_.pose = des_state_vec_[0].pose.pose;
         next_pose_.header = des_state_vec_[0].header;
+
+        // Clear gradeful stopping trajectory to load a new one
+        graceful_state_vec_.clear();
         trajBuilder_.build_braking_traj(current_pose_, next_pose_, graceful_state_vec_);
         motion_mode_ = HALTING;
-        traj_pt_i_ = 0;
-        npts_traj_ = graceful_state_vec_.size();
-        ROS_INFO("TOLD TO ENTER E STOP STATE: npts = %d", npts_traj_);
+        traj_pt_i2_ = 0;
+        npts_traj2_ = graceful_state_vec_.size();
+        ROS_INFO("TOLD TO ENTER E STOP STATE: npts = %d", npts_traj2_);
     }
     //or if an e-stop has been cleared
     if (e_stop_reset_) {
@@ -172,9 +175,8 @@ void DesStatePublisher::pub_next_state() {
         if (motion_mode_ != E_STOPPED) {
             ROS_WARN("e-stop reset while not in e-stop mode");
         }
-        //OK...want to resume motion from e-stopped mode;
         else {
-            motion_mode_ = DONE_W_SUBGOAL; //this will pick up where left off
+            motion_mode_ = PURSUING_SUBGOAL; //this will pick up where left off
         }
         ROS_INFO("TOLD TO CLEAR E STOP STATE");
     }
@@ -211,7 +213,7 @@ void DesStatePublisher::pub_next_state() {
         case HALTING: //e-stop service callback sets this mode
             //if need to brake from e-stop, service will have computed
             // new  GRACEFUL des_state_vec_, set indices and set motion mode;
-            current_des_state_ = graceful_state_vec_[traj_pt_i_];
+            current_des_state_ = graceful_state_vec_[traj_pt_i2_];
             current_des_state_.header.stamp = ros::Time::now();
             desired_state_publisher_.publish(current_des_state_);
             current_pose_.pose = current_des_state_.pose.pose;
@@ -221,9 +223,9 @@ void DesStatePublisher::pub_next_state() {
             float_msg_.data = des_psi_;
             des_psi_publisher_.publish(float_msg_); 
             
-            traj_pt_i_++;
+            traj_pt_i2_++;
             //segue from braking to halted e-stop state;
-            if (traj_pt_i_ >= npts_traj_) { //here if completed all pts of braking traj
+            if (traj_pt_i2_ >= npts_traj2_) { //here if completed all pts of braking traj
                 halt_state_ = graceful_state_vec_.back(); //last point of halting traj
                 // make sure it has 0 twist
                 halt_state_.twist.twist = halt_twist_;
@@ -282,4 +284,5 @@ void DesStatePublisher::pub_next_state() {
             desired_state_publisher_.publish(current_des_state_);
             break;
     }
+    ROS_WARN("End SM: traj_pt_i_ = %d, traj_pt_i2_ = %d", traj_pt_i_, traj_pt_i2_);
 }
