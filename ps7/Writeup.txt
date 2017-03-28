@@ -1,0 +1,24 @@
+Trent Ziemer
+Dr. Newman
+Mobile Robotics - EECS 376
+March 27, 2017
+
+PS7: Open loop vs Closed Loop Steering Feedback Control
+
+I created two launch files: mobot.launch and mobot2.launch that do open-loop control and closed-loop control for the given waypoints in pub_des_state_path_client.
+The path I created for the closed-loop odometry control is currently in that .cpp file, with the slightly different path coordinates as comments for the open loop control part.
+
+The video "mobot_olc.mp4" shows the robot doing the first open loop control path.
+
+The robot gets to the goal location, but it has to follow a convoluted path that accounts for the non-idealities of the robot.
+
+The video "mobot_steering.mp4" shows the robot with the steering algorithm following the same path but actually getting to each waypoint as intended.
+
+The robot follows the actual path specified in the waypoints.
+
+The video "fast_mobot.mp4" shows the robot with the updated control parameters.
+
+The robot moves slightly faster because I increased the control gain and the maximum speed and turn speed. Unfortunately I couldnt get it to go much faster than that because the robot would swerve unstably and crash on it's path if I tried to make it go too much faster. 
+
+
+
