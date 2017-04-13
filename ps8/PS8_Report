@@ -1,0 +1,15 @@
+Trent Ziemer
+Dr. Newman
+EECS 376 
+April 13, 2017
+
+PS 8: Odometry and AMCL Steering
+
+For this project I found out what nodes interfaced where annd on what topics they communicated on first. 
+Then I launched those nodes from a single launch file I created to see what would happen. 
+Given some test input locations I found out how to move the mobot in some directions. I used that to give it the actual location coordinates. 
+From there, I fine tuned the control algorithm so the mobot would move as specified. Then I recorded a video of the mobot moving from start to the end of the hallway and then back to the original location.
+
+To run, swap out the learning_ros files with my three copies, and then run "roslaunch .../path/to/a.launch"
+
+

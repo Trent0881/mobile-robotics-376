@@ -1,0 +1,36 @@
+<launch> 
+
+	<!-- 1 -->
+	<include file="$(find gazebo_ros)/launch/empty_world.launch" /> 
+
+	<!-- 2 -->
+	<include file="$(find exmpl_models)/launch/add_glennan_2nd_flr.launch"/> 
+
+	<!-- 3 -->
+	<include file="$(find mobot_urdf)/launch/mobot_w_lidar.launch"/> 
+	
+	<!-- 4 -->
+	<node pkg="map_server" type="map_server" name="map_server" args="/home/mordoc/ros_ws/src/learning_ros/exmpl_models/glennan_2nd_flr/glennan_2nd_flr_model_map.yaml" > 
+	</node> -->
+
+	<!-- 5 -->
+	<node pkg="amcl"  type="amcl" name="amcl" > 
+	</node> -->
+
+	<!-- 6 -->
+	<node pkg="mobot_drifty_odom"  type="mobot_drifty_odom" name="mobot_drifty_odom" > 
+	</node> -->
+
+	<!-- 7 -->
+	<node pkg="mobot_pub_des_state"  type="mobot_pub_des_state" name="mobot_pub_des_state" > 
+	</node> -->
+
+	<!-- MINE -->
+	<node pkg="lin_steering"  type="lin_steering_wrt_odom" name="lin_steering_wrt_amcl" > 
+	</node> -->
+
+	<!-- TEMPLATE
+	<node pkg=" "  type=" " name=" " output=" " > 
+	</node> -->
+
+</launch>
