@@ -1,0 +1,20 @@
+Trent Ziemer
+
+Dr. Newman
+
+EECS 376 Mobile Robotics
+
+April 20, 2017
+
+PS9: Object Finding in Simulation
+
+I made the appropriate adjustments for the first part as indicated in up1.png and up2.png (two images from different POVs that show the correct transform).
+Then I removed some from the z component as indicated for down1.png and down2.ong (two images from different POVs that show the correct transform).
+
+<node pkg="tf" type="static_transform_publisher" name="kinect_calib" args="0.5 0 0.875 0 1.45 0 base
+camera_link 50"/>
+
+
+For the second part, pose_matched.png shows the transform as outputted on the terminal, as matching with the focal point of my camera on RVIZ. These values make sense because they corroborate each other, and match up roughly where I would expect based on intuition.
+
+The code for the modified action server is included as well.
